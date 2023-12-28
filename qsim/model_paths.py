@@ -19,10 +19,16 @@ drake_manipulation_models_path = os.path.join(
     pydrake.common.GetDrakePath(), "manipulation/models"
 )
 iiwa_controller_models_path = os.path.join(get_package_path(), "models")
+
+# put the TRI's IDTO project, idto/examples here (Github: https://github.com/ToyotaResearchInstitute/idto)
+idto_solver_models_path = "/home/yongpeng/research/projects/contact_rich/idto/examples/models"
+
 package_paths_dict = {
     "quasistatic_simulator": models_dir,
     "drake_manipulation_models": drake_manipulation_models_path,
+    # "drake_models": drake_manipulation_models_path,
     "iiwa_controller": iiwa_controller_models_path,
+    "idto_models": idto_solver_models_path,
 }
 
 

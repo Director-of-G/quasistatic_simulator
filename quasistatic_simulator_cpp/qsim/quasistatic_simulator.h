@@ -12,12 +12,27 @@
 #include "drake/solvers/scs_solver.h"
 #include "qsim/contact_jacobian_calculator.h"
 
+// #define VERBOSE_TIMECOST
+
 /*
  * Denotes whether the indices are those of a model's configuration vector
  * into the configuration vector of the system, or those of a model's velocity
  * vector into the velocity vector of the system.
  */
 enum class ModelIndicesMode { kQ, kV };
+
+struct CalcDiffProblemData {
+    // for Pyramid (2d cases)
+    Eigen::MatrixXd Q, Jn, J;
+    Eigen::VectorXd tau_h, phi, phi_constraints, v_star, beta_star;
+
+    // for Icecream (3d cases)
+    std::vector<Eigen::Matrix3Xd> J_list;
+    std::vector<Eigen::VectorXd> lambda_star_list, e_list;
+
+    // mbp positions
+    ModelInstanceIndexToVecMap q_dict, q_next_dict;
+};
 
 class QuasistaticSimulator {
  public:
@@ -179,6 +194,38 @@ class QuasistaticSimulator {
       QuasistaticSimulator* q_sim, const Eigen::Ref<const Eigen::VectorXd>& q,
       const Eigen::Ref<const Eigen::VectorXd>& u,
       const QuasistaticSimParameters& sim_params);
+
+  // TODO(yongpeng): added the splition of forward and backward dynamics
+  // -----------------------------------------------------------------------
+  void Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
+            const ModelInstanceIndexToVecMap& tau_ext_dict,
+            const QuasistaticSimParameters& params);
+
+  void CalcDiff(const QuasistaticSimParameters& params);
+
+  static Eigen::VectorXd CalcDynamicsForward(
+      QuasistaticSimulator* q_sim, const Eigen::Ref<const Eigen::VectorXd>& q,
+      const Eigen::Ref<const Eigen::VectorXd>& u,
+      const QuasistaticSimParameters& sim_params);
+
+  void CalcDynamicsBackward(
+      QuasistaticSimulator* q_sim,
+      const QuasistaticSimParameters& sim_params);
+
+  /*
+   * These wrappers split forward and backward processes of the dynamics model
+   * , which is friendly to DDP. As you do not need to compute the derivatives
+   * in the forward pass again and again.
+   */
+  Eigen::VectorXd CalcDynamicsForward(const Eigen::Ref<const Eigen::VectorXd>& q,
+                                      const Eigen::Ref<const Eigen::VectorXd>& u,
+                                      const QuasistaticSimParameters& sim_params);
+
+  void CalcDynamicsBackward(const QuasistaticSimParameters& sim_params);
+  
+  struct CalcDiffProblemData CalcDiffProblemData_;
+  bool problem_updated_{false};
+  // -----------------------------------------------------------------------
 
   /*
    * Wrapper around QuasistaticSimulator::Step, which takes as inputs state
@@ -393,6 +440,19 @@ class QuasistaticSimulator {
                            const Eigen::Ref<const Eigen::VectorXd>& v_star,
                            const QuasistaticSimParameters& params,
                            const Eigen::LLT<Eigen::MatrixXd>& H_llt);
+
+  // TODO(yongpeng): handle the non-contact case separately
+  // -----------------------------------------------------------------------
+  void BackwardLogPyramid(const Eigen::Ref<const Eigen::MatrixXd>& Q,
+                           const ModelInstanceIndexToVecMap& q_dict,
+                           const QuasistaticSimParameters& params,
+                           bool has_contact);
+
+  void BackwardLogIcecream(const Eigen::Ref<const Eigen::MatrixXd>& Q,
+                           const ModelInstanceIndexToVecMap& q_dict,
+                           const QuasistaticSimParameters& params,
+                           bool has_contact);
+  // -----------------------------------------------------------------------
 
   bool is_socp_calculating_dual(const QuasistaticSimParameters& params) const {
     return params.calc_contact_forces ||

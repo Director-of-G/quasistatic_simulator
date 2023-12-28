@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.10.2)
-project(quasistatic_simulator_cpp)
+project(quasistatic_simulator)
 
 # N.B. This is a temporary flag. It only really applies to Linux, as Mac
 # does not need X11.
@@ -75,3 +75,15 @@ add_subdirectory(diffcp)
 add_subdirectory(bindings)
 add_subdirectory(tests)
 add_subdirectory(examples)
+
+# install(EXPORT ${CMAKE_PROJECT_NAME}
+#         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
+#         NAMESPACE ${CMAKE_PROJECT_NAME}::
+#         FILE ${CMAKE_PROJECT_NAME}Config.cmake
+# )
+
+# install(DIRECTORY qsim diffcp
+#         DESTINATION include
+#         FILES_MATCHING
+#         PATTERN *.h
+# )

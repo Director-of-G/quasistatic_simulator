@@ -4,14 +4,14 @@
     <!-- The model for a solid box of uniform density. -->
     <link name="box">
       <inertial>
-        <mass>0.5</mass>
+        <mass>1.0</mass>
         <inertia>
-          <ixx>0.042</ixx>
+          <ixx>0.42</ixx>
           <ixy>0</ixy>
           <ixz>0</ixz>
-          <iyy>0.042</iyy>
+          <iyy>0.42</iyy>
           <iyz>0</iyz>
-          <izz>0.042</izz>
+          <izz>0.42</izz>
         </inertia>
       </inertial>
 

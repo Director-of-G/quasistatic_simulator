@@ -130,7 +130,7 @@
           </box>
         </geometry>
       </collision> -->
-      <collision name="link_1_collision_2">
+      <collision name="link_1_collision_1">
         <pose>0 0 0.008 0 0 0</pose>
         <geometry>
           <sphere>
@@ -138,7 +138,7 @@
           </sphere>
         </geometry>
       </collision>
-      <collision name="link_1_collision_3">
+      <collision name="link_1_collision_2">
         <pose>0 0 0.034 0 0 0</pose>
         <geometry>
           <sphere>
@@ -374,7 +374,7 @@
           </box>
         </geometry>
       </collision> -->
-      <collision name="link_1_collision_2">
+      <collision name="link_5_collision_1">
         <pose>0 0 0.008 0 0 0</pose>
         <geometry>
           <sphere>
@@ -382,7 +382,7 @@
           </sphere>
         </geometry>
       </collision>
-      <collision name="link_1_collision_3">
+      <collision name="link_5_collision_2">
         <pose>0 0 0.034 0 0 0</pose>
         <geometry>
           <sphere>
@@ -439,7 +439,7 @@
           </box>
         </geometry>
       </collision> -->
-      <collision name="link_2_collision_1">
+      <collision name="link_6_collision_1">
         <pose>0 0 0.012 0 0 0</pose>
         <geometry>
           <sphere>
@@ -447,7 +447,7 @@
           </sphere>
         </geometry>
       </collision>
-      <collision name="link_2_collision_2">
+      <collision name="link_6_collision_2">
         <pose>0 0 0.038 0 0 0</pose>
         <geometry>
           <sphere>
@@ -621,7 +621,7 @@
           </box>
         </geometry>
       </collision> -->
-      <collision name="link_1_collision_2">
+      <collision name="link_9_collision_1">
         <pose>0 0 0.008 0 0 0</pose>
         <geometry>
           <sphere>
@@ -629,7 +629,7 @@
           </sphere>
         </geometry>
       </collision>
-      <collision name="link_1_collision_3">
+      <collision name="link_9_collision_2">
         <pose>0 0 0.034 0 0 0</pose>
         <geometry>
           <sphere>
@@ -686,7 +686,7 @@
           </box>
         </geometry>
       </collision> -->
-      <collision name="link_2_collision_1">
+      <collision name="link_10_collision_1">
         <pose>0 0 0.012 0 0 0</pose>
         <geometry>
           <sphere>
@@ -694,7 +694,7 @@
           </sphere>
         </geometry>
       </collision>
-      <collision name="link_2_collision_2">
+      <collision name="link_10_collision_2">
         <pose>0 0 0.038 0 0 0</pose>
         <geometry>
           <sphere>
@@ -975,7 +975,7 @@
           </box>
         </geometry>
       </collision> -->
-      <collision name="link_15_tip_collision_0">
+      <collision name="link_15_tip_collision_1">
         <pose>0 0 0.016 0 0 0</pose>
         <geometry>
           <sphere>
@@ -983,7 +983,7 @@
           </sphere>
         </geometry>
       </collision>
-      <collision name="link_15_tip_collision_1">
+      <collision name="link_15_tip_collision_2">
         <pose>0 0 0.042 0 0 0</pose>
         <geometry>
           <sphere>

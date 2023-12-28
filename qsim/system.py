@@ -23,7 +23,7 @@ from .simulator import QuasistaticSimulator, QuasistaticSimParameters
 class QuasistaticSystem(LeafSystem):
     def __init__(
         self,
-        q_sim: QuasistaticSimulatorCpp | QuasistaticSimulator,
+        q_sim,
         sim_params: QuasistaticSimParameters,
     ):
         """

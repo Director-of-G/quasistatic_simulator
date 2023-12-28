@@ -100,10 +100,12 @@ void LogBarrierSolverBase::SolveMultipleNewtonSteps(
     const Eigen::Ref<const Eigen::VectorXd>& e, double kappa_max,
     drake::EigenPtr<VectorXd> v_star_ptr) const {
   double kappa = 1;
+  double n_iters = 0;
   while (true) {
     SolveOneNewtonStep(Q, b, G, e, kappa, v_star_ptr);
     kappa = std::min(kappa_max, kappa * 2);
     if (kappa == kappa_max) {
+      std::cout << "> it took " << n_iters << " to solve the log barrier problem" << std::endl;
       break;
     }
   }
@@ -282,6 +284,10 @@ void SocpLogBarrierSolver::SolvePhaseOne(
 
   Matrix3Xd A(3, n_v + 1);
   A.rightCols(1) = Vector3d(1, 0, 0);
+
+  // std::cout << "Matrix G has " << G.rows() << " rows and " << G.cols() << " columns." << std::endl;
+  // std::cout << "There are " << n_c << " contact points." << std::endl;
+
   for (int i = 0; i < n_c; i++) {
     A.leftCols(n_v) = -G.block(i * 3, 0, 3, n_v);
     Vector3d b(e[i], 0, 0);

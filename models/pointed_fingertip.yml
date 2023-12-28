@@ -1,0 +1,16 @@
+directives:
+
+- add_model:
+    name: pointed_fingertip
+    file: package://quasistatic_simulator/pointed_fingertip.sdf
+
+- add_frame:
+    name: world_hand_offset
+    X_PF:
+        base_frame: world
+        translation: [0, 0, 0]
+        rotation: !Rpy {deg: [0.0, 0.0, 0.0]}
+
+- add_weld:
+    parent: world_hand_offset
+    child: pointed_fingertip::virtual_world

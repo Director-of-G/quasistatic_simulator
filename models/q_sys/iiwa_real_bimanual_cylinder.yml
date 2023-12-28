@@ -1,4 +1,4 @@
-model_directive: package://quasistatic_simulator/iiwa_sphere_collision_bimanual.yml
+model_directive: package://quasistatic_simulator/iiwa_real_collision_bimanual.yml
 robots:
   -
     name: iiwa_left

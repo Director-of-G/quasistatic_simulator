@@ -11,6 +11,8 @@ using Eigen::VectorXd;
 using std::cout;
 using std::endl;
 
+extern Eigen::IOFormat HeavyFmt;
+
 MatrixXd CalcC(const Eigen::Ref<const Eigen::VectorXd>& v) {
   const auto n = v.size();
   MatrixXd V(n, n);
@@ -87,11 +89,21 @@ void SocpDerivatives::UpdateProblem(
 
     C_lambda_list.emplace_back(std::move(C_lambda_i));
     lambda_star_active(seqN(m * i, m)) = lambda_i;
+
+    // std::cout << "---Derivative through the " << i << "th contact point---" << std::endl;
+    // std::cout << "lambda: " << lambda_i.format(HeavyFmt) << std::endl;
+    // std::cout << "d(cone)/d(v): \n" << A_inv.block(k, 0, m, n_z).format(HeavyFmt) << std::endl;
+    // std::cout << "d(KKT)/d(lambda): \n" << A_inv.block(0, k, n_z, m).format(HeavyFmt) << std::endl;
+    // std::cout << "d(cone)/d(lambda): \n" << A_inv.block(k, k, m, m).format(HeavyFmt) << std::endl;
   }
 
   const MatrixXd A = QpDerivatives::CalcInverseAndCheck(A_inv, tol_);
   //  cout << "A_inv\n" << A_inv << endl;
   //  cout << "A\n" << A << endl;
+
+  A_inv_ = A_inv;
+  A_ = A;
+  num_active_contacts_ = n_c_active;
 
   const MatrixXd& A_11 = A.topLeftCorner(n_z, n_z);
   DzDb_ = -A_11;

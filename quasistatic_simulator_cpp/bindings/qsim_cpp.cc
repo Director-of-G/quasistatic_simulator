@@ -91,6 +91,19 @@ PYBIND11_MODULE(qsim_cpp, m) {
                                const QuasistaticSimParameters&>(
                  &Class::CalcDynamics),
              py::arg("q"), py::arg("u"), py::arg("sim_params"))
+
+        // TODO(yongpeng): APIs for forward and backward dynamics
+        .def("calc_dynamics_forward",
+             py::overload_cast<const Eigen::Ref<const Eigen::VectorXd>&,
+                               const Eigen::Ref<const Eigen::VectorXd>&,
+                               const QuasistaticSimParameters&>(
+                 &Class::CalcDynamicsForward),
+             py::arg("q"), py::arg("u"), py::arg("sim_params"))
+        .def("calc_dynamics_backward",
+             py::overload_cast<const QuasistaticSimParameters&>(
+                 &Class::CalcDynamicsBackward),
+             py::arg("sim_params"))
+
         .def("calc_scaled_mass_matrix", &Class::CalcScaledMassMatrix)
         .def("calc_tau_ext", &Class::CalcTauExt)
         .def("get_model_instance_name_to_index_map",

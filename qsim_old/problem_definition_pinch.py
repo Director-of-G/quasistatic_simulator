@@ -10,7 +10,7 @@ n_d = np.array([2, 2, 2])  # num of rays per friction cone.
 n_f = n_d.sum()
 assert n_c == n_d.size
 
-Jn_u = np.array([[1, 0], [-1, 0], [0, 1]], dtype=np.float)
+Jn_u = np.array([[1, 0], [-1, 0], [0, 1]], dtype=float)
 Jn_a = np.array([[-1, 0, 0], [0, 1, 0.0], [0, 0, 0]])
 
 Jf_u = np.zeros((n_f, n_u))

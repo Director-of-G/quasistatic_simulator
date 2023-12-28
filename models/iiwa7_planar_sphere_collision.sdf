@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
+
   <model name="iiwa7">
+    
     <link name="iiwa_link_0">
       <inertial>
         <pose>-0.013 0 0.07 0 0 0</pose>
@@ -18,7 +20,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_0.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_0.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -45,13 +47,15 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_1.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_1.stl</uri>
           </mesh>
         </geometry>
         <material>
           <diffuse>0.4 0.4 0.4 0.5</diffuse>
         </material>
       </visual>
+
+      <!-- TODO: yongpeng -->
       <collision name='iiwa_link_1_contact'>
         <pose>0 -0.05 0.175 0 -0 0</pose>
         <geometry>
@@ -79,6 +83,8 @@
           <diffuse>0.8 0.8 0.8 1.0</diffuse>
         </material>
       </visual>
+      <!-- TODO: yongpeng -->
+
       <gravity>1</gravity>
     </link>
     <joint name="iiwa_joint_1" type="revolute">
@@ -118,13 +124,15 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_2.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_2.stl</uri>
           </mesh>
         </geometry>
         <material>
           <diffuse>1.0 0.423529411765 0.0392156862745 0.5</diffuse>
         </material>
       </visual>
+
+      <!-- TODO: yongpeng -->
       <visual name='iiwa_link_2_contact_visual'>
         <pose>0 0.18 0 0 -0 0</pose>
         <geometry>
@@ -179,6 +187,8 @@
           </friction>
         </surface>
       </collision>
+      <!-- TODO: yongpeng -->
+
       <gravity>1</gravity>
     </link>
     <joint name="iiwa_joint_2" type="fixed">
@@ -203,13 +213,15 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_3.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_3.stl</uri>
           </mesh>
         </geometry>
         <material>
           <diffuse>0.4 0.4 0.4 0.5</diffuse>
         </material>
       </visual>
+
+      <!-- TODO: yongpeng -->
       <visual name='iiwa_link_3_contact_visual'>
         <pose>0 0.05 0.21 0 -0 0</pose>
         <geometry>
@@ -264,6 +276,8 @@
           </friction>
         </surface>
       </collision>
+      <!-- TODO: yongpeng -->
+
       <gravity>1</gravity>
     </link>
     <joint name="iiwa_joint_3" type="fixed">
@@ -288,13 +302,15 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_4.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_4.stl</uri>
           </mesh>
         </geometry>
         <material>
           <diffuse>1.0 0.42 0.04 0.5</diffuse>
         </material>
       </visual>
+
+      <!-- TODO: yongpeng -->
       <visual name='iiwa_link_4_contact_visual'>
         <pose>0 0.01 0.052 0 -0 0</pose>
         <geometry>
@@ -349,6 +365,8 @@
           </friction>
         </surface>
       </collision>
+      <!-- TODO: yongpeng -->
+
       <gravity>1</gravity>
     </link>
     <joint name="iiwa_joint_4" type="revolute">
@@ -388,7 +406,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_5.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_5.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -396,6 +414,7 @@
         </material>
       </visual>
 
+      <!-- TODO: yongpeng -->
       <visual name='iiwa_link_5_contact_visual'>
         <pose>0 0 0.03 0 -0 0</pose>
         <geometry>
@@ -511,6 +530,8 @@
           </friction>
         </surface>
       </collision>
+      <!-- TODO: yongpeng -->
+
       <gravity>1</gravity>
     </link>
     <joint name="iiwa_joint_5" type="fixed">
@@ -536,7 +557,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_6.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_6.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -544,6 +565,7 @@
         </material>
       </visual>
 
+      <!-- TODO: yongpeng -->
       <visual name='iiwa_link_6_contact_visual'>
         <pose>0 -0.03 0.007 0 -0 0</pose>
         <geometry>
@@ -601,6 +623,8 @@
           </friction>
         </surface>
       </collision>
+      <!-- TODO: yongpeng -->
+
       <gravity>1</gravity>
     </link>
     <joint name="iiwa_joint_6" type="revolute">
@@ -640,7 +664,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://drake_models/iiwa_description/iiwa7/link_7.obj</uri>
+            <uri>package://drake_manipulation_models/iiwa_description/iiwa7/meshes/visual/link_7.stl</uri>
           </mesh>
         </geometry>
         <material>

@@ -21,6 +21,8 @@ class SocpDerivatives {
                      double lambda_threshold, bool calc_G_grad);
   [[nodiscard]] const Eigen::MatrixXd& get_DzDe() const { return DzDe_; }
   [[nodiscard]] const Eigen::MatrixXd& get_DzDb() const { return DzDb_; }
+  const Eigen::MatrixXd& get_A() const { return A_; }
+  const int& get_num_active_contacts() const { return num_active_contacts_; }
   [[nodiscard]] std::pair<const Eigen::MatrixXd&, const std::vector<int>&>
   get_DzDvecG_active() const {
     return {DzDvecG_active_, lambda_star_active_indices_};
@@ -31,5 +33,10 @@ class SocpDerivatives {
   Eigen::MatrixXd DzDe_;
   Eigen::MatrixXd DzDb_;
   Eigen::MatrixXd DzDvecG_active_;
+
+  Eigen::MatrixXd A_;
+  Eigen::MatrixXd A_inv_;
+  int num_active_contacts_;
+
   std::vector<int> lambda_star_active_indices_;
 };

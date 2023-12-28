@@ -24,7 +24,8 @@ std::unordered_map<std::string, std::filesystem::path> GetPackageMap() {
 
   static std::unordered_map<std::string, std::filesystem::path> package_map = {
       {"quasistatic_simulator", GetQsimModelsPath()},
-      {"drake_manipulation_models", drake_path / "manipulation" / "models"}};
+      {"drake_manipulation_models", drake_path / "manipulation" / "models"},
+      {"idto_models", "/home/yongpeng/research/projects/contact_rich/idto/examples/models"}};
 
   return package_map;
 }

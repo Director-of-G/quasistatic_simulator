@@ -16,3 +16,7 @@ build
 cmake-build-debug
 cmake-build-release
 build*
+/qsim_backup
+/quasistatic_simulator_cpp/qsim_old
+/quasistatic_simulator_cpp/bindings_backup
+/quasistatic_simulator_cpp/tests_backup

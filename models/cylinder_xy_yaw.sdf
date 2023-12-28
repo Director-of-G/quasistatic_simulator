@@ -50,6 +50,9 @@
         <limit>
           <effort>0</effort>
         </limit>
+        <dynamics>
+          <friction>3</friction>
+        </dynamics>
       </axis>
     </joint>
 
@@ -64,6 +67,9 @@
         <limit>
           <effort>0</effort>
         </limit>
+        <dynamics>
+          <friction>3</friction>
+        </dynamics>
       </axis>
     </joint>
 
@@ -78,6 +84,9 @@
         <limit>
           <effort>0</effort>
         </limit>
+        <dynamics>
+          <friction>0.1</friction>
+        </dynamics>
       </axis>
     </joint>
 

@@ -74,6 +74,11 @@ class QuasistaticSimulator {
   void CalcGravityForUnactuatedModels(
       ModelInstanceIndexToVecMap* tau_ext) const;
 
+// TODO(yongpeng): set fake gravity force to attract robot links to objects, this could be replaced by modifying joint references
+//   void SetFakeGravityForce(
+      
+//   ) const;
+
   ModelInstanceIndexToVecMap CalcTauExt(
       const std::vector<
           drake::multibody::ExternallyAppliedSpatialForce<double>>& easf_list)
@@ -252,6 +257,13 @@ class QuasistaticSimulator {
 
   void print_solver_info_for_default_params() const;
 
+  // TODO(yongpeng): for contact normal
+  void SetManipulandNames(const std::vector<std::string>& manipuland_names);
+  Eigen::MatrixXd get_Nhat() const {return Nhat_;}
+  Eigen::MatrixXd get_Jn_list() const {return CalcDiffProblemData_.Jn;}
+  Eigen::VectorXd get_phi_list() const {return CalcDiffProblemData_.phi;}
+//   Eigen::Matrix
+
  private:
   static Eigen::Matrix<double, 4, 3> CalcNW2Qdot(
       const Eigen::Ref<const Eigen::Vector4d>& Q);
@@ -348,6 +360,7 @@ class QuasistaticSimulator {
                             const ModelInstanceIndexToVecMap& tau_ext_dict,
                             const QuasistaticSimParameters& params,
                             Eigen::MatrixXd* Q, Eigen::VectorXd* tau_h,
+                            Eigen::MatrixXd* Jn_ptr,
                             std::vector<Eigen::Matrix3Xd>* J_list,
                             Eigen::VectorXd* phi) const;
 
@@ -532,4 +545,7 @@ class QuasistaticSimulator {
 
   std::unique_ptr<ContactJacobianCalculator<double>> cjc_;
   std::unique_ptr<ContactJacobianCalculator<drake::AutoDiffXd>> cjc_ad_;
+
+  // TODO(yongpeng): for contact normal
+  mutable Eigen::MatrixXd Nhat_;
 };

@@ -128,6 +128,9 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def("num_dofs", &Class::num_dofs)
         .def("get_Dq_nextDq", &Class::get_Dq_nextDq)
         .def("get_Dq_nextDqa_cmd", &Class::get_Dq_nextDqa_cmd)
+        .def("get_Nhat", &Class::get_Nhat)
+        .def("get_Jn_list", &Class::get_Jn_list)
+        .def("get_phi_list", &Class::get_phi_list)
         .def("get_velocity_indices", &Class::GetVelocityIndices)
         .def("get_position_indices", &Class::GetPositionIndices)
         .def("get_v_dict_from_vec", &Class::GetVdictFromVec)
@@ -139,7 +142,8 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def("get_q_u_indices_into_q", &Class::GetQuIndicesIntoQ)
         .def("get_actuated_joint_limits", &Class::GetActuatedJointLimits)
         .def("print_solver_info_for_default_params",
-             &Class::print_solver_info_for_default_params);
+             &Class::print_solver_info_for_default_params)
+        .def("set_manipuland_names", &Class::SetManipulandNames);
   }
 
   {

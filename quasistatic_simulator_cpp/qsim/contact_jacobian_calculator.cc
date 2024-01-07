@@ -179,9 +179,11 @@ ContactJacobianCalculator<T>::GetMbpBodyFromGeometry(
 template <class T>
 void ContactJacobianCalculator<T>::CalcJacobianAndPhiQp(
     const drake::systems::Context<T>* context_plant,
-    const vector<drake::geometry::SignedDistancePair<T>>& sdps, const int n_d,
+    const std::vector<drake::geometry::SignedDistancePair<T>>& sdps, int n_d,
     drake::VectorX<T>* phi_ptr, drake::MatrixX<T>* Jn_ptr,
-    std::vector<drake::MatrixX<T>>* J_list_ptr) const {
+    std::vector<drake::MatrixX<T>>* J_list_ptr,
+    drake::MatrixX<T>* Nhat_list_ptr
+  ) const {
   UpdateContactPairInfo(context_plant, sdps);
 
   const auto n_c = sdps.size();
@@ -192,12 +194,25 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiQp(
   MatrixX<T>& Jn = *Jn_ptr;
   phi.resize(n_c);
   Jn.resize(n_c, n_v);
+  if (Nhat_list_ptr) {
+    Nhat_list_ptr->resize(n_c, 3);
+  }
   J_list_ptr->clear();
 
   for (int i_c = 0; i_c < n_c; i_c++) {
     const auto& sdp = sdps[i_c];
     const auto& cpi = contact_pairs_[i_c];
     const auto mu = get_friction_coefficient(i_c);
+
+    // contact normal
+    if (Nhat_list_ptr) {
+      if (cpi.is_A_manipuland) {
+        Nhat_list_ptr->row(i_c) = sdp.distance * sdp.nhat_BA_W.transpose();
+      }
+      else {
+        Nhat_list_ptr->row(i_c) = - sdp.distance * sdp.nhat_BA_W.transpose();
+      }
+    }
 
     phi[i_c] = sdp.distance;
     Jn.row(i_c) = sdp.nhat_BA_W.transpose() * cpi.Jc;
@@ -216,16 +231,23 @@ template <class T>
 void ContactJacobianCalculator<T>::CalcJacobianAndPhiSocp(
     const drake::systems::Context<T>* context_plant,
     const std::vector<drake::geometry::SignedDistancePair<T>>& sdps,
-    drake::VectorX<T>* phi_ptr,
-    std::vector<drake::Matrix3X<T>>* J_list_ptr) const {
+    drake::VectorX<T>* phi_ptr, drake::MatrixX<T>* Jn_ptr,
+    std::vector<drake::Matrix3X<T>>* J_list_ptr,
+    drake::MatrixX<T>* Nhat_list_ptr
+  ) const {
   UpdateContactPairInfo(context_plant, sdps);
 
   const auto n_c = sdps.size();
   const int n_v = plant_->num_velocities();
 
   VectorX<T>& phi = *phi_ptr;
+  MatrixX<T>& Jn = *Jn_ptr;
   std::vector<drake::Matrix3X<T>>& J_list = *J_list_ptr;
   phi.resize(n_c);
+  Jn.resize(n_c, n_v);
+  if (Nhat_list_ptr) {
+    Nhat_list_ptr->resize(n_c, 3);
+  }
   J_list.clear();
 
   for (int i_c = 0; i_c < n_c; i_c++) {
@@ -233,7 +255,19 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiSocp(
     const auto& cpi = contact_pairs_[i_c];
     const auto mu = get_friction_coefficient(i_c);
 
+    // contact normal
+    if (Nhat_list_ptr) {
+      if (cpi.is_A_manipuland) {
+        Nhat_list_ptr->row(i_c) = sdp.distance * sdp.nhat_BA_W.transpose();
+      }
+      else {
+        Nhat_list_ptr->row(i_c) = - sdp.distance * sdp.nhat_BA_W.transpose();
+      }
+    }
+
     phi[i_c] = sdp.distance;
+    Jn.row(i_c) = sdp.nhat_BA_W.transpose() * cpi.Jc;
+
     J_list.template emplace_back(3, n_v);
     Matrix3X<T>& J_i = J_list.back();
     const drake::Matrix3<T> R =
@@ -249,6 +283,13 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiSocp(
     J_i.row(1) = t1.transpose() * cpi.Jc;
     J_i.row(2) = t2.transpose() * cpi.Jc;
   }
+}
+
+template <class T>
+void ContactJacobianCalculator<T>::SetManipulandNames(
+    const std::vector<std::string>& manipuland_names
+) {
+    manipuland_names_ = manipuland_names;
 }
 
 template class ContactJacobianCalculator<double>;

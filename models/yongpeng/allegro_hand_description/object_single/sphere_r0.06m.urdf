@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<!-- =================================================================================== -->
+<!-- 
+  This file is modified from allegro_hand_description_right.urdf from
+  the official Allegro ROS package
+  (https://github.com/simlabrobotics/allegro_hand_ros_v4). A world link
+  is added as root link, and a sphere is added as the manipuland. The
+  free floating joint is created between the sphere and world link.
+-->
+<!-- =================================================================================== -->
+<robot name="ball" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- ======================== BASE PARAMS ========================= -->
+  <!-- ======================== FINGER PARAMS ======================== -->
+  <!-- full height from joint to tip. when used,
+    the radius of the finger tip sphere will be subtracted
+    and one fixed link will be added for the tip. -->
+  <!-- ========================= THUMB PARAMS ========================= -->
+  <!-- ========================= LIMITS ========================= -->
+  <!-- ============================================================================= -->
+  
+  <!-- WORLD -->
+  <!-- <link name="world_fake" /> -->
+
+  <!-- SPHERE (MANIPULAND) -->
+  <link name="sphere_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0 "/>
+      <material name="milkwhite">
+        <color rgba="1.0 0.9843 0.9412 0.8" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.06" />
+        <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0" />
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0" />
+      <mass value="0.1"/>
+      <inertia ixx="1e-4" ixy="0.0" ixz="0.0" iyy="1e-4" iyz="0.0" izz="1e-4"/>
+    </inertial>
+  </link>
+
+  <!-- HIGH LEVEL JOINT -->
+  <!-- <joint name="sphere_world_joint" type="floating">
+    <parent link="world_fake"/>
+    <child link="sphere_link"/>
+  </joint> -->
+  <!-- ============================================================================= -->
+  <!-- THUMB MACRO -->
+  <!-- END THUMB MACRO -->
+  <!-- THREE FINGER MACRO -->
+  <!-- [[END]] THREE FINGER MACRO -->
+</robot>

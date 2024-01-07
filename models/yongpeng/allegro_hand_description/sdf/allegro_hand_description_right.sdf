@@ -1,0 +1,935 @@
+<sdf version='1.7'>
+  <model name='allegro_hand_right'>
+    <link name='palm_link'>
+      <inertial>
+        <pose>0 0 0.0475 0 -0 0</pose>
+        <mass>0.4154</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0</iyz>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+      <collision name='palm_link_collision'>
+        <pose>-0.0093 0 -0.0475 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0408 0.113 0.095</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='palm_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/base_link.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_0.0' type='revolute'>
+      <pose relative_to='palm_link'>0 0.0435 -0.001542 -0.087266 0 0</pose>
+      <parent>palm_link</parent>
+      <child>link_0.0</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-0.47</lower>
+          <upper>0.47</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_0.0'>
+      <pose relative_to='joint_0.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0119</mass>
+        <inertia>
+          <ixx>1.01667e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>6.47677e-07</iyy>
+          <iyz>0</iyz>
+          <izz>1.01667e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_0.0_collision'>
+        <pose>0 0 0.0082 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0164</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_0.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_0.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_1.0' type='revolute'>
+      <pose relative_to='link_0.0'>0 0 0.0164 0 -0 0</pose>
+      <parent>link_0.0</parent>
+      <child>link_1.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.196</lower>
+          <upper>1.61</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>5</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_1.0'>
+      <pose relative_to='joint_1.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.065</mass>
+        <inertia>
+          <ixx>7.95654e-05</ixx>
+          <ixy>1.7199e-05</ixy>
+          <ixz>8.75875e-06</ixz>
+          <iyy>2.47089e-05</iyy>
+          <iyz>2.41313e-05</iyz>
+          <izz>7.95654e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_1.0_collision'>
+        <pose>0 0 0.027 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.054</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_1.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_1.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_2.0' type='revolute'>
+      <pose relative_to='link_1.0'>0 0 0.054 0 -0 0</pose>
+      <parent>link_1.0</parent>
+      <child>link_2.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.174</lower>
+          <upper>1.709</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>8</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_2.0'>
+      <pose relative_to='joint_2.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0355</mass>
+        <inertia>
+          <ixx>2.63979e-05</ixx>
+          <ixy>6.67968e-06</ixy>
+          <ixz>4.78363e-06</ixz>
+          <iyy>1.34949e-05</iyy>
+          <iyz>9.372e-06</iyz>
+          <izz>2.63979e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_2.0_collision'>
+        <pose>0 0 0.0192 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0384</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_2.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_2.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_3.0' type='revolute'>
+      <pose relative_to='link_2.0'>0 0 0.0384 0 -0 0</pose>
+      <parent>link_2.0</parent>
+      <child>link_3.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.227</lower>
+          <upper>1.618</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>10</damping>
+          <friction>12</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_3.0'>
+      <pose relative_to='joint_3.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0.016991 0 -0 0</pose>
+        <mass>0.0264</mass>
+        <inertia>
+          <ixx>1.00244e-05</ixx>
+          <ixy>1.25597e-06</ixy>
+          <ixz>1.2936e-06</ixz>
+          <iyy>8.97242e-06</iyy>
+          <iyz>1.7622e-06</iyz>
+          <izz>5.66925e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_3.0_collision'>
+        <pose>0 0 0.01335 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0267</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name='link_3.0_tip_collision_1'>
+        <pose>0 0 0.0267 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.012</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='link_3.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_3.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='link_3.0_tip_visual_1'>
+        <pose>0 0 0.0267 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_3.0_tip.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_12.0' type='revolute'>
+      <pose relative_to='palm_link'>-0.0182 0.019333 -0.045987 3.14159 -1.48353 1.5708</pose>
+      <parent>palm_link</parent>
+      <child>link_12.0</child>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <limit>
+          <lower>0.263</lower>
+          <upper>1.396</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_12.0'>
+      <pose relative_to='joint_12.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0176</mass>
+        <inertia>
+          <ixx>1.89273e-05</ixx>
+          <ixy>7.16716e-06</ixy>
+          <ixz>5.35568e-06</ixz>
+          <iyy>1.43008e-05</iyy>
+          <iyz>6.8068e-06</iyz>
+          <izz>1.89273e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_12.0_collision'>
+        <pose>-0.0179 0.009 0.0145 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0358 0.034 0.0455</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_12.0_visual'>
+        <pose>0 0 0 3.14159 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_12.0_right.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_13.0' type='revolute'>
+      <pose relative_to='link_12.0'>-0.027 0.005 0.0399 0 -0 0</pose>
+      <parent>link_12.0</parent>
+      <child>link_13.0</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-0.105</lower>
+          <upper>1.163</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>5</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_13.0'>
+      <pose relative_to='joint_13.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0119</mass>
+        <inertia>
+          <ixx>4.24251e-06</ixx>
+          <ixy>1.03209e-06</ixy>
+          <ixz>1.60353e-06</ixz>
+          <iyy>4.52363e-06</iyy>
+          <iyz>1.44808e-06</iyz>
+          <izz>4.24251e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_13.0_collision'>
+        <pose>0 0 0.00885 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0177</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_13.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_13.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_14.0' type='revolute'>
+      <pose relative_to='link_13.0'>0 0 0.0177 0 -0 0</pose>
+      <parent>link_13.0</parent>
+      <child>link_14.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.189</lower>
+          <upper>1.644</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_14.0'>
+      <pose relative_to='joint_14.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.038</mass>
+        <inertia>
+          <ixx>4.3044e-05</ixx>
+          <ixy>9.57068e-06</ixy>
+          <ixz>5.1205e-06</ixz>
+          <iyy>1.44452e-05</iyy>
+          <iyz>1.34282e-05</iyz>
+          <izz>4.3044e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_14.0_collision'>
+        <pose>0 0 0.0257 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0514</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_14.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_14.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_15.0' type='revolute'>
+      <pose relative_to='link_14.0'>0 0 0.0514 0 -0 0</pose>
+      <parent>link_14.0</parent>
+      <child>link_15.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.162</lower>
+          <upper>1.719</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>12</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_15.0'>
+      <pose relative_to='joint_15.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0.012781 0 -0 0</pose>
+        <mass>0.0556</mass>
+        <inertia>
+          <ixx>5.48675e-05</ixx>
+          <ixy>8.04208e-06</ixy>
+          <ixz>5.2283e-06</ixz>
+          <iyy>3.66945e-05</iyy>
+          <iyz>1.12835e-05</iyz>
+          <izz>3.38903e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_15.0_collision'>
+        <pose>0 0 0.02115 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0423</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name='link_15.0_tip_collision_1'>
+        <pose>0 0 0.0423 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.012</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='link_15.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_15.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='link_15.0_tip_visual_1'>
+        <pose>0 0 0.0423 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_15.0_tip.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_4.0' type='revolute'>
+      <pose relative_to='palm_link'>0 0 0.0007 0 -0 0</pose>
+      <parent>palm_link</parent>
+      <child>link_4.0</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-0.47</lower>
+          <upper>0.47</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_4.0'>
+      <pose relative_to='joint_4.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0119</mass>
+        <inertia>
+          <ixx>1.01667e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>6.47677e-07</iyy>
+          <iyz>0</iyz>
+          <izz>1.01667e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_4.0_collision'>
+        <pose>0 0 0.0082 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0164</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_4.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_0.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_5.0' type='revolute'>
+      <pose relative_to='link_4.0'>0 0 0.0164 0 -0 0</pose>
+      <parent>link_4.0</parent>
+      <child>link_5.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.196</lower>
+          <upper>1.61</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>5</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_5.0'>
+      <pose relative_to='joint_5.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.065</mass>
+        <inertia>
+          <ixx>7.95654e-05</ixx>
+          <ixy>1.7199e-05</ixy>
+          <ixz>8.75875e-06</ixz>
+          <iyy>2.47089e-05</iyy>
+          <iyz>2.41313e-05</iyz>
+          <izz>7.95654e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_5.0_collision'>
+        <pose>0 0 0.027 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.054</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_5.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_1.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_6.0' type='revolute'>
+      <pose relative_to='link_5.0'>0 0 0.054 0 -0 0</pose>
+      <parent>link_5.0</parent>
+      <child>link_6.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.174</lower>
+          <upper>1.709</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>8</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_6.0'>
+      <pose relative_to='joint_6.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0355</mass>
+        <inertia>
+          <ixx>2.63979e-05</ixx>
+          <ixy>6.67968e-06</ixy>
+          <ixz>4.78363e-06</ixz>
+          <iyy>1.34949e-05</iyy>
+          <iyz>9.372e-06</iyz>
+          <izz>2.63979e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_6.0_collision'>
+        <pose>0 0 0.0192 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0384</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_6.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_2.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_7.0' type='revolute'>
+      <pose relative_to='link_6.0'>0 0 0.0384 0 -0 0</pose>
+      <parent>link_6.0</parent>
+      <child>link_7.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.227</lower>
+          <upper>1.618</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>10</damping>
+          <friction>12</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_7.0'>
+      <pose relative_to='joint_7.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0.016991 0 -0 0</pose>
+        <mass>0.0264</mass>
+        <inertia>
+          <ixx>1.00244e-05</ixx>
+          <ixy>1.25597e-06</ixy>
+          <ixz>1.2936e-06</ixz>
+          <iyy>8.97242e-06</iyy>
+          <iyz>1.7622e-06</iyz>
+          <izz>5.66925e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_7.0_collision'>
+        <pose>0 0 0.01335 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0267</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name='link_7.0_tip_collision_1'>
+        <pose>0 0 0.0267 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.012</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='link_7.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_3.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='link_7.0_tip_visual_1'>
+        <pose>0 0 0.0267 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_3.0_tip.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_8.0' type='revolute'>
+      <pose relative_to='palm_link'>0 -0.0435 -0.001542 0.087266 -0 0</pose>
+      <parent>palm_link</parent>
+      <child>link_8.0</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-0.47</lower>
+          <upper>0.47</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_8.0'>
+      <pose relative_to='joint_8.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0119</mass>
+        <inertia>
+          <ixx>1.01667e-06</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>6.47677e-07</iyy>
+          <iyz>0</iyz>
+          <izz>1.01667e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_8.0_collision'>
+        <pose>0 0 0.0082 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0164</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_8.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_0.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_9.0' type='revolute'>
+      <pose relative_to='link_8.0'>0 0 0.0164 0 -0 0</pose>
+      <parent>link_8.0</parent>
+      <child>link_9.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.196</lower>
+          <upper>1.61</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>3</damping>
+          <friction>5</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_9.0'>
+      <pose relative_to='joint_9.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.065</mass>
+        <inertia>
+          <ixx>7.95654e-05</ixx>
+          <ixy>1.7199e-05</ixy>
+          <ixz>8.75875e-06</ixz>
+          <iyy>2.47089e-05</iyy>
+          <iyz>2.41313e-05</iyz>
+          <izz>7.95654e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_9.0_collision'>
+        <pose>0 0 0.027 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.054</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_9.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_1.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_10.0' type='revolute'>
+      <pose relative_to='link_9.0'>0 0 0.054 0 -0 0</pose>
+      <parent>link_9.0</parent>
+      <child>link_10.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.174</lower>
+          <upper>1.709</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>8</damping>
+          <friction>10</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_10.0'>
+      <pose relative_to='joint_10.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.0355</mass>
+        <inertia>
+          <ixx>2.63979e-05</ixx>
+          <ixy>6.67968e-06</ixy>
+          <ixz>4.78363e-06</ixz>
+          <iyy>1.34949e-05</iyy>
+          <iyz>9.372e-06</iyz>
+          <izz>2.63979e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_10.0_collision'>
+        <pose>0 0 0.0192 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0384</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='link_10.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_2.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_11.0' type='revolute'>
+      <pose relative_to='link_10.0'>0 0 0.0384 0 -0 0</pose>
+      <parent>link_10.0</parent>
+      <child>link_11.0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-0.227</lower>
+          <upper>1.618</upper>
+          <effort>15</effort>
+          <velocity>7</velocity>
+        </limit>
+        <dynamics>
+          <damping>10</damping>
+          <friction>12</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_11.0'>
+      <pose relative_to='joint_11.0'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0.016991 0 -0 0</pose>
+        <mass>0.0264</mass>
+        <inertia>
+          <ixx>1.00244e-05</ixx>
+          <ixy>1.25597e-06</ixy>
+          <ixz>1.2936e-06</ixz>
+          <iyy>8.97242e-06</iyy>
+          <iyz>1.7622e-06</iyz>
+          <izz>5.66925e-06</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_11.0_collision'>
+        <pose>0 0 0.01335 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0196 0.0275 0.0267</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name='link_11.0_tip_collision_1'>
+        <pose>0 0 0.0267 0 -0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.012</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name='link_11.0_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_3.0.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='link_11.0_tip_visual_1'>
+        <pose>0 0 0.0267 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://allegro_hand_description/meshes/link_3.0_tip.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

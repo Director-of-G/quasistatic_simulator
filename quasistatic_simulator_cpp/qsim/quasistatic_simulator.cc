@@ -410,19 +410,31 @@ void QuasistaticSimulator::Step(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
     VectorXd tau_h, phi, phi_constraints;
     // Primal and dual solutions.
     VectorXd v_star;
+#ifdef VERBOSE_TIMECOST
+    auto calcProblemDataStartTime = std::chrono::steady_clock::now();
+#endif
     CalcPyramidMatrices(q_dict, q_a_cmd_dict, tau_ext_dict, params, &Q, &tau_h,
                         &Jn, &J, &phi, &phi_constraints);
 
 #ifdef VERBOSE_TIMECOST
     nowTime = std::chrono::steady_clock::now();
-    duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - stepStartTime).count();
+    duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - calcProblemDataStartTime).count();
     std::cout << "> it took " << duration_millsecond << " ms to compute the pyramid matrices" << std::endl;
 #endif
 
     if (fm == ForwardDynamicsMode::kQpMp) {
       VectorXd beta_star;
+#ifdef VERBOSE_TIMECOST
+      auto qpMpStartTime = std::chrono::steady_clock::now();
+#endif
       ForwardQp(Q, tau_h, J, phi_constraints, params, &q_next_dict, &v_star,
                 &beta_star);
+#ifdef VERBOSE_TIMECOST
+      nowTime = std::chrono::steady_clock::now();
+      duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - qpMpStartTime).count();
+      std::cout << "> qpMp forward time: " << duration_millsecond << " ms" << std::endl;
+      qpMpStartTime = std::chrono::steady_clock::now();
+#endif
 
       if (params.calc_contact_forces) {
         CalcContactResultsQp(cjc_->get_contact_pair_info_list(), beta_star,
@@ -431,27 +443,50 @@ void QuasistaticSimulator::Step(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
         contact_results_.set_plant(plant_);
       }
 
-      BackwardQp(Q, tau_h, Jn, J, phi_constraints, q_dict, q_next_dict, v_star,
-                 beta_star, params);
+      // BackwardQp(Q, tau_h, Jn, J, phi_constraints, q_dict, q_next_dict, v_star,
+      //            beta_star, params);
+      BackwardLogPyramid(Q, J, phi_constraints, q_dict, q_next_dict, v_star,
+                          params, &solver_log_pyramid_->get_H_llt());
+#ifdef VERBOSE_TIMECOST
+      nowTime = std::chrono::steady_clock::now();
+      duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - qpMpStartTime).count();
+      std::cout << "> pyramidQp backward time: " << duration_millsecond << " ms" << std::endl;
+#endif
       return;
     }
 
     if (fm == ForwardDynamicsMode::kLogPyramidMp) {
+#ifdef VERBOSE_TIMECOST
+      auto pyramidMpStartTime = std::chrono::steady_clock::now();
+#endif
       ForwardLogPyramid(Q, tau_h, J, phi_constraints, params, &q_next_dict,
                         &v_star);
+#ifdef VERBOSE_TIMECOST
+      nowTime = std::chrono::steady_clock::now();
+      duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - pyramidMpStartTime).count();
+      std::cout << "> pyramidMp forward time: " << duration_millsecond << " ms" << std::endl;
+      pyramidMpStartTime = std::chrono::steady_clock::now();
+#endif
       BackwardLogPyramid(Q, J, phi_constraints, q_dict, q_next_dict, v_star,
                          params, nullptr);
+#ifdef VERBOSE_TIMECOST
+      nowTime = std::chrono::steady_clock::now();
+      duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - pyramidMpStartTime).count();
+      std::cout << "> pyramidMp backward time: " << duration_millsecond << " ms" << std::endl;
+#endif
       return;
     }
 
     if (fm == ForwardDynamicsMode::kLogPyramidMy) {
+#ifdef VERBOSE_TIMECOST
+      auto pyramidMyStartTime = std::chrono::steady_clock::now();
+#endif
       ForwardLogPyramidInHouse(Q, tau_h, J, phi_constraints, params,
                                &q_next_dict, &v_star);
-
 #ifdef VERBOSE_TIMECOST
-    nowTime = std::chrono::steady_clock::now();
-    duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - stepStartTime).count();
-    std::cout << "> it took " << duration_millsecond << " ms to compute the forward(calc) pass" << std::endl;
+      nowTime = std::chrono::steady_clock::now();
+      duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - pyramidMyStartTime).count();
+      std::cout << "> pyramidMy forward time: " << duration_millsecond << " ms" << std::endl;
 #endif
 
       if (J.rows() > 0) {
@@ -473,12 +508,12 @@ void QuasistaticSimulator::Step(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
   }
 
   if (kIcecreamModes.find(fm) != kIcecreamModes.end()) {
-    MatrixXd Q;
+    MatrixXd Q, Jn;
     VectorXd tau_h, phi;
     std::vector<Eigen::Matrix3Xd> J_list;
     VectorXd v_star;
     CalcIcecreamMatrices(q_dict, q_a_cmd_dict, tau_ext_dict, params, &Q, &tau_h,
-                         &J_list, &phi);
+                         &Jn, &J_list, &phi);
 
     if (fm == ForwardDynamicsMode::kSocpMp) {
       std::vector<Eigen::VectorXd> lambda_star_list;
@@ -546,7 +581,7 @@ void QuasistaticSimulator::CalcPyramidMatrices(
   std::vector<MatrixXd> J_list;
   const auto n_d = params.nd_per_contact;
   cjc_->CalcJacobianAndPhiQp(context_plant_, sdps, n_d, phi_ptr, Jn_ptr,
-                             &J_list);
+                             &J_list, &Nhat_);
   MatrixXd& J = *J_ptr;
   VectorXd& phi_constraints = *phi_constraints_ptr;
 
@@ -568,10 +603,12 @@ void QuasistaticSimulator::CalcIcecreamMatrices(
     const ModelInstanceIndexToVecMap& q_a_cmd_dict,
     const ModelInstanceIndexToVecMap& tau_ext_dict,
     const QuasistaticSimParameters& params, Eigen::MatrixXd* Q,
-    Eigen::VectorXd* tau_h, std::vector<Eigen::Matrix3Xd>* J_list,
+    Eigen::VectorXd* tau_h,
+    Eigen::MatrixXd* Jn_ptr,
+    std::vector<Eigen::Matrix3Xd>* J_list,
     Eigen::VectorXd* phi) const {
   const auto sdps = CalcCollisionPairs(params.contact_detection_tolerance);
-  cjc_->CalcJacobianAndPhiSocp(context_plant_, sdps, phi, J_list);
+  cjc_->CalcJacobianAndPhiSocp(context_plant_, sdps, phi, Jn_ptr, J_list, &Nhat_);
   CalcQAndTauH(q_dict, q_a_cmd_dict, tau_ext_dict, params.h, Q, tau_h,
                params.unactuated_mass_scale);
 }
@@ -1354,8 +1391,9 @@ Eigen::MatrixXd QuasistaticSimulator::CalcDfDxSocp(
     // TODO(pang): only J_active_ad is used. Think of a less wasteful interface?
     std::vector<Matrix3X<AutoDiffXd>> J_active_ad_list;
     VectorX<AutoDiffXd> phi_active_ad;
+    MatrixX<AutoDiffXd> Jn_active_ad;
     cjc_ad_->CalcJacobianAndPhiSocp(context_plant_ad_, sdps_active,
-                                    &phi_active_ad, &J_active_ad_list);
+                                    &phi_active_ad, &Jn_active_ad, &J_active_ad_list, nullptr);
 
     const auto DvecG_activeDq =
         CalcDGactiveDqFromJActiveList<3>(J_active_ad_list, nullptr);
@@ -1411,7 +1449,8 @@ Eigen::MatrixXd QuasistaticSimulator::CalcDfDxLogIcecream(
   const auto n_c = sdps.size();
   std::vector<Matrix3X<AutoDiffXd>> J_ad_list;
   VectorX<AutoDiffXd> phi_ad;
-  cjc_ad_->CalcJacobianAndPhiSocp(context_plant_ad_, sdps, &phi_ad, &J_ad_list);
+  MatrixX<AutoDiffXd> Jn_list;
+  cjc_ad_->CalcJacobianAndPhiSocp(context_plant_ad_, sdps, &phi_ad, &Jn_list, &J_ad_list, nullptr);
 
   //  cout << "DyDq\n" << DyDq << endl;
 
@@ -1820,6 +1859,7 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
   MatrixXd Q;
   VectorXd tau_h, phi, v_star;
 
+
   if (kPyramidModes.find(fm) != kPyramidModes.end()) {
     // Optimization coefficient matrices and vectors.
     MatrixXd Jn, J;
@@ -1861,9 +1901,10 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
 
   else if (kIcecreamModes.find(fm) != kIcecreamModes.end()) {
     
+    MatrixXd Jn;
     std::vector<Eigen::Matrix3Xd> J_list;
     CalcIcecreamMatrices(q_dict, q_a_cmd_dict, tau_ext_dict, params, &Q, &tau_h,
-                         &J_list, &phi);
+                         &Jn, &J_list, &phi);
 
     if (fm == ForwardDynamicsMode::kSocpMp) {
       std::vector<Eigen::VectorXd> lambda_star_list;
@@ -1894,7 +1935,8 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
       ForwardLogIcecream(Q, tau_h, J_list, phi, params, &q_next_dict, &v_star);
     }
 
-    // save J_list
+    // save J_list and Jn_list
+    CalcDiffProblemData_.Jn = Jn;
     CalcDiffProblemData_.J_list.clear();
     for (auto J_i : J_list){
       CalcDiffProblemData_.J_list.push_back(J_i);
@@ -1934,8 +1976,10 @@ void QuasistaticSimulator::CalcDiff(const QuasistaticSimParameters& params) {
     if (fm == ForwardDynamicsMode::kQpMp) {
       VectorXd beta_star(CalcDiffProblemData_.beta_star);
 
-      BackwardQp(Q, tau_h, Jn, J, phi_constraints, q_dict, q_next_dict, v_star,
-                 beta_star, params);
+      // BackwardQp(Q, tau_h, Jn, J, phi_constraints, q_dict, q_next_dict, v_star,
+      //            beta_star, params);
+      BackwardLogPyramid(Q, J, phi_constraints, q_dict, q_next_dict, v_star,
+                          params, &solver_log_pyramid_->get_H_llt());
       return;
     }
 
@@ -2014,6 +2058,18 @@ void QuasistaticSimulator::CalcDynamicsBackward(
 void QuasistaticSimulator::CalcDynamicsBackward(
     const QuasistaticSimParameters& sim_params) {
   CalcDynamicsBackward(this, sim_params);
+}
+
+void QuasistaticSimulator::SetManipulandNames(
+  const std::vector<std::string>& manipuland_names) {
+  if (cjc_) {
+    cjc_->SetManipulandNames(manipuland_names);
+  }
+  else {
+    std::stringstream ss;
+    ss << "You shold initialize ContactJacobianCalculator first!";
+    throw std::logic_error(ss.str());
+  }
 }
 
 // -----------------------------------------------------------------------------

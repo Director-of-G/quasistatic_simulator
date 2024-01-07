@@ -27,6 +27,9 @@ struct ContactPairInfo {
   drake::multibody::BodyIndex body_B_idx;
   drake::geometry::GeometryId id_A;
   drake::geometry::GeometryId id_B;
+
+  // TODO(yongpeng): For contact normal.
+  bool is_A_manipuland{false};
 };
 
 template <typename T>
@@ -35,6 +38,9 @@ class ContactJacobianCalculator {
   ContactJacobianCalculator(
       const drake::systems::Diagram<T>* diagram,
       std::set<drake::multibody::ModelInstanceIndex> models_all);
+
+  // TODO(yongpeng): For contact normal.
+  void SetManipulandNames(const std::vector<std::string>& manipuland_names);
   /*
    * Computes contact Jacobians for the list of SignedDistancePairs. This
    * should be the first function that gets called when computing Jacobians
@@ -59,13 +65,23 @@ class ContactJacobianCalculator {
       const drake::systems::Context<T>* context_plant,
       const std::vector<drake::geometry::SignedDistancePair<T>>& sdps, int n_d,
       drake::VectorX<T>* phi_ptr, drake::MatrixX<T>* Jn_ptr,
-      std::vector<drake::MatrixX<T>>* J_list_ptr) const;
+      std::vector<drake::MatrixX<T>>* J_list_ptr,
+      drake::MatrixX<T>* Nhat_list_ptr=nullptr) const;
+
+//   // TODO(yongpeng): calculate normal as an oracle to maintain contact
+//   void CalcJacobianAndPhiQpAndNorm(
+//       const drake::systems::Context<T>* context_plant,
+//       const std::vector<drake::geometry::SignedDistancePair<T>>& sdps, int n_d,
+//       drake::VectorX<T>* phi_ptr, drake::MatrixX<T>* Jn_ptr,
+//       std::vector<drake::MatrixX<T>>* J_list_ptr,
+//       drake::MatrixX<T>* Nhat_list_ptr) const;
 
   void CalcJacobianAndPhiSocp(
       const drake::systems::Context<T>* context_plant,
       const std::vector<drake::geometry::SignedDistancePair<T>>& sdps,
-      drake::VectorX<T>* phi_ptr,
-      std::vector<drake::Matrix3X<T>>* J_list_ptr) const;
+      drake::VectorX<T>* phi_ptr, drake::MatrixX<T>* Jn_ptr,
+      std::vector<drake::Matrix3X<T>>* J_list_ptr,
+      drake::MatrixX<T>* Nhat_list_ptr=nullptr) const;
 
  private:
   double GetFrictionCoefficientForSignedDistancePair(
@@ -104,6 +120,9 @@ class ContactJacobianCalculator {
 
   // Mutable storage for the current contact.
   mutable std::vector<ContactPairInfo<T>> contact_pairs_;
+
+  // TODO(yongpeng): For contact normal.
+  std::vector<std::string> manipuland_names_;
 };
 
 extern template class ContactJacobianCalculator<double>;

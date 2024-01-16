@@ -34,6 +34,11 @@ struct CalcDiffProblemData {
     ModelInstanceIndexToVecMap q_dict, q_next_dict;
 };
 
+struct ContactInfoData {
+    Eigen::MatrixXd Jn;
+    Eigen::VectorXd phi;
+};
+
 class QuasistaticSimulator {
  public:
   QuasistaticSimulator(
@@ -74,10 +79,11 @@ class QuasistaticSimulator {
   void CalcGravityForUnactuatedModels(
       ModelInstanceIndexToVecMap* tau_ext) const;
 
-// TODO(yongpeng): set fake gravity force to attract robot links to objects, this could be replaced by modifying joint references
-//   void SetFakeGravityForce(
-      
-//   ) const;
+  // TODO (yongpeng): update contact information, without evaluating the dynamics
+  void UpdateContactInformation(
+    const Eigen::Ref<const Eigen::VectorXd>& q,
+    const QuasistaticSimParameters& params
+  );
 
   ModelInstanceIndexToVecMap CalcTauExt(
       const std::vector<
@@ -228,7 +234,12 @@ class QuasistaticSimulator {
 
   void CalcDynamicsBackward(const QuasistaticSimParameters& sim_params);
   
+  /*
+    CalcDiffProblemData_ contains data evaluated in Calc, which is invariant
+    MutableContactInfoData_ contains data evaluated in UpdateContactInfo, which is mutable
+  */
   struct CalcDiffProblemData CalcDiffProblemData_;
+  struct ContactInfoData MutableContactInfoData_;
   bool problem_updated_{false};
   // -----------------------------------------------------------------------
 
@@ -260,8 +271,15 @@ class QuasistaticSimulator {
   // TODO(yongpeng): for contact normal
   void SetManipulandNames(const std::vector<std::string>& manipuland_names);
   Eigen::MatrixXd get_Nhat() const {return Nhat_;}
+
+  // TODO(yongpeng): deprecate this
   Eigen::MatrixXd get_Jn_list() const {return CalcDiffProblemData_.Jn;}
   Eigen::VectorXd get_phi_list() const {return CalcDiffProblemData_.phi;}
+
+  // Jn and phi here are mutable, and should be updated with UpdateContactInformation
+  Eigen::MatrixXd get_Jn() const {return MutableContactInfoData_.Jn;}
+  Eigen::VectorXd get_phi() const {return MutableContactInfoData_.phi;}
+
 //   Eigen::Matrix
 
  private:

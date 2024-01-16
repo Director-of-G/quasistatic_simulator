@@ -1,3 +1,3 @@
 pybind11_add_module(qsim_cpp MODULE qsim_cpp.cc)
-target_link_libraries(qsim_cpp PUBLIC quasistatic_simulator)
+target_link_libraries(qsim_cpp PUBLIC quasistatic_simulator pinocchio_calculator ${PINOCCHIO_LIBRARIES})
 set_target_properties(qsim_cpp PROPERTIES CXX_VISIBILITY_PRESET default)

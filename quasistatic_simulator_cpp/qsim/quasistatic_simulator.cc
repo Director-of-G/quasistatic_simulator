@@ -28,6 +28,8 @@ using std::endl;
 using std::string;
 using std::vector;
 
+Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", " << ", ";");
+
 void CreateMbp(
     drake::systems::DiagramBuilder<double>* builder,
     const string& model_directive_path,
@@ -2070,6 +2072,41 @@ void QuasistaticSimulator::SetManipulandNames(
     ss << "You shold initialize ContactJacobianCalculator first!";
     throw std::logic_error(ss.str());
   }
+}
+
+void QuasistaticSimulator::UpdateContactInformation(
+  const Eigen::Ref<const Eigen::VectorXd>& q,
+  const QuasistaticSimParameters& params
+) {
+  this->UpdateMbpPositions(q);
+  const auto q_dict = this->GetMbpPositions();
+  const auto fm = params.forward_mode;
+  
+  const auto sdps = this->CalcCollisionPairs(params.contact_detection_tolerance);
+
+  VectorXd phi;
+  MatrixXd Jn, Nhat;
+
+  if (kPyramidModes.find(fm) != kPyramidModes.end()) {
+    // J_list is used by CalcJacobianAndPhiQp, but not stored
+    std::vector<Eigen::MatrixXd> J_list;
+    this->cjc_->CalcJacobianAndPhiQp(
+      this->context_plant_, sdps, params.nd_per_contact, &phi, &Jn, &J_list, &Nhat
+    );
+  }
+
+  if (kIcecreamModes.find(fm) != kIcecreamModes.end()) {
+    // J_list is used by CalcJacobianAndPhiSocp, but not stored
+    std::vector<Eigen::Matrix3Xd> J_list;
+    this->cjc_->CalcJacobianAndPhiSocp(
+      this->context_plant_, sdps, &phi, &Jn, &J_list, &Nhat
+    );
+  }
+
+  MutableContactInfoData_.phi = phi;
+  MutableContactInfoData_.Jn = Jn;
+
+  // std::cout << "q: " << q.format(CommaInitFmt) << std::endl;
 }
 
 // -----------------------------------------------------------------------------

@@ -66,6 +66,7 @@ int main(int argc, char **argv)
         0.016, 0.001, 0.071,
         1, 0, 0, 0;
 
+    pinocchio::forwardKinematics(model, data, q0);
     pinocchio::computeCollisions(model, data, collision_model, geom_data, q0);
 
     std::cout << "There are " << geom_data.collisionResults.size() << " collision pairs." << std::endl;

@@ -9,8 +9,50 @@
 #include "qsim/contact_jacobian_calculator.h"
 #include "qsim/finite_differencing_gradient.h"
 #include "qsim/quasistatic_simulator.h"
+#include "qsim/pinocchio_calculator.h"
 
 namespace py = pybind11;
+
+// convert RowMajor Eigen::Tensor to np.ndarray
+py::array tensor_to_array(const Eigen::Tensor<double, 3, Eigen::RowMajor>& tensor) {
+    const auto shape = tensor.dimensions();
+    const auto stride = Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>(
+        shape[1] * shape[2], shape[2]);
+
+    return py::array(
+        py::buffer_info(
+            const_cast<double*>(tensor.data()),
+            sizeof(double),
+            py::format_descriptor<double>::format(),
+            3,
+            {shape[0], shape[1], shape[2]},
+            {sizeof(double) * stride.outer(), sizeof(double) * stride.inner(), sizeof(double)}
+        )
+    );
+}
+
+// convert ColMajor Eigen::Tensor to np.ndarray
+py::array tensor_to_array(const Eigen::Tensor<double, 3, Eigen::ColMajor>& tensor) {
+    const auto dimensions = tensor.dimensions();
+    const size_t dim_x = dimensions[0];
+    const size_t dim_y = dimensions[1];
+    const size_t dim_z = dimensions[2];
+
+    const size_t stride_x = sizeof(double);
+    const size_t stride_y = stride_x * dim_x;
+    const size_t stride_z = stride_y * dim_y;
+
+    return py::array(
+        py::buffer_info(
+            const_cast<double*>(tensor.data()),
+            sizeof(double),
+            py::format_descriptor<double>::format(),
+            3,
+            {dim_x, dim_y, dim_z},
+            {stride_x, stride_y, stride_z}
+        )
+    );
+}
 
 PYBIND11_MODULE(qsim_cpp, m) {
   py::enum_<GradientMode>(m, "GradientMode")
@@ -103,6 +145,9 @@ PYBIND11_MODULE(qsim_cpp, m) {
              py::overload_cast<const QuasistaticSimParameters&>(
                  &Class::CalcDynamicsBackward),
              py::arg("sim_params"))
+        .def("update_contact_info",
+             &Class::UpdateContactInformation,
+             py::arg("q"), py::arg("sim_params"))
 
         .def("calc_scaled_mass_matrix", &Class::CalcScaledMassMatrix)
         .def("calc_tau_ext", &Class::CalcTauExt)
@@ -131,6 +176,8 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def("get_Nhat", &Class::get_Nhat)
         .def("get_Jn_list", &Class::get_Jn_list)
         .def("get_phi_list", &Class::get_phi_list)
+        .def("get_phi", &Class::get_phi)
+        .def("get_Jn", &Class::get_Jn)
         .def("get_velocity_indices", &Class::GetVelocityIndices)
         .def("get_position_indices", &Class::GetPositionIndices)
         .def("get_v_dict_from_vec", &Class::GetVdictFromVec)
@@ -203,5 +250,37 @@ PYBIND11_MODULE(qsim_cpp, m) {
     py::class_<Class>(m, "QpLogBarrierSolver")
         .def(py::init<>())
         .def("solve", &Class::Solve);
+  }
+
+  {
+    using Class = PinocchioCalculator;
+    py::class_<Class>(m, "PinocchioCalculator")
+        .def(py::init<
+              const std::string&,
+              const std::string&>(), 
+          py::arg("robot_urdf_filename"), 
+          py::arg("object_urdf_filename"))
+        .def("UpdateModelConfiguration", 
+          &Class::UpdateModelConfiguration, 
+          py::arg("q0"))
+        .def("UpdateHessiansAndJacobians", 
+          &Class::UpdateHessiansAndJacobians)
+        
+        .def("GetContactJacobian",
+          &Class::GetContactJacobian,
+          py::arg("T_C2F"),
+          py::arg("N_hat"),
+          py::arg("F_name"))
+
+        .def("GetContactKinematicHessian", [](Class &instance,
+                                              const Eigen::Matrix4d& T_C2F,
+                                              const Eigen::Vector3d& N_hat,
+                                              const std::string F_name) {
+                                              auto tensor = instance.GetContactKinematicHessian(T_C2F, N_hat, F_name);
+                                              return tensor_to_array(tensor);
+                                             },
+          py::arg("T_C2F"), 
+          py::arg("N_hat"), 
+          py::arg("F_name"));
   }
 }

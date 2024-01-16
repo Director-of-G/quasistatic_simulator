@@ -3,6 +3,8 @@ import numpy as np
 import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
 
+from qsim_cpp import PinocchioCalculator
+
 
 Identity_SE3 = pin.SE3.Identity()
 
@@ -18,10 +20,36 @@ Identity_SE3 = pin.SE3.Identity()
 # )
 
 ## load models and add the manipuland
-robot_urdf_path = "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/robot_single/allegro_hand_description_right.urdf"
+robot_urdf_path = "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/robot_single/allegro_hand_description_right_v2.urdf"
 object_urdf_path = "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/object_single/sphere_r0.06m.urdf"
 robot_srdf_path = "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/srdf/allegro_hand_right_userdefine.srdf"
 mesh_dir = "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/meshes"
+
+q0 = np.array(
+    [
+        0.03501504, 0.75276565, 0.74146232, 0.83261002,
+        0.63256269, 1.02378254, 0.64089555, 0.82444782,
+        -0.1438725, 0.74696812, 0.61908827, 0.70064279,
+        -0.06922541, 0.78533142, 0.82942863, 0.90415436,
+        0.016, 0.001, 0.071,
+        1, 0, 0, 0
+    ]
+)
+
+import pdb; pdb.set_trace()
+
+pin_calc = PinocchioCalculator(
+    robot_urdf_path,
+    object_urdf_path
+)
+
+pin_calc.UpdateModelConfiguration(q0)
+pin_calc.UpdateHessiansAndJacobians()
+kin_H = pin_calc.GetContactKinematicHessian(
+    np.eye(4),
+    np.zeros(3,),
+    "link_15"
+)
 
 ## planar pushing case
 # robot_urdf_path = "/home/yongpeng/research/projects/contact_rich/idto/dex_playground/mujoco_playground/contact_model/test_CQDC_model/models/urdf/dex_2d_robot.urdf"
@@ -75,16 +103,6 @@ except ImportError as err:
 viz.loadViewerModel()
  
 # Display a robot configuration.
-q0 = np.array(
-    [
-        0.03501504, 0.75276565, 0.74146232, 0.83261002,
-        0.63256269, 1.02378254, 0.64089555, 0.82444782,
-        -0.1438725, 0.74696812, 0.61908827, 0.70064279,
-        -0.06922541, 0.78533142, 0.82942863, 0.90415436,
-        0.016, 0.001, 0.071,
-        1, 0, 0, 0
-    ]
-)
 
 viz.display(q0)
 viz.displayCollisions(True)

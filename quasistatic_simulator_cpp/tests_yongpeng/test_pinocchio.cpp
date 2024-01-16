@@ -16,7 +16,7 @@ using namespace pinocchio;
 
 int main(int argc, char** argv) {
     const std::string urdf_filename = \
-        "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/robot_single/allegro_hand_description_right.urdf";
+        "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description/robot_obj_combined/allegro_hand_description_right_ball_scene.urdf";
 
     const std::string robots_model_path = \
         "/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/models/yongpeng/allegro_hand_description";
@@ -42,11 +42,13 @@ int main(int argc, char** argv) {
     
     // Load the reference configuration of the robots (this one should be collision free)
     Model::ConfigVectorType q;
-    q.resize(16);
+    q.resize(23);
     q << 0.03501504, 0.75276565, 0.74146232, 0.83261002,
          0.63256269, 1.02378254, 0.64089555, 0.82444782,
         -0.1438725, 0.74696812, 0.61908827, 0.70064279,
-        -0.06922541, 0.78533142, 0.82942863, 0.90415436;
+        -0.06922541, 0.78533142, 0.82942863, 0.90415436,
+        0, 0, 10,
+        1, 0, 0, 0;
     
     // And test all the collision pairs
     pinocchio::computeCollisions(model,data,geom_model,geom_data,q);
@@ -72,6 +74,10 @@ int main(int argc, char** argv) {
     computeJointKinematicHessians(model, data, q);
     // pinocchio::Tensor<double, 3> hessian(6, model.nq, model.nq);
     auto hessian = getJointKinematicHessian(model, data, 10, pinocchio::WORLD);
+    std::cout << "model.nq=" << model.nq << std::endl;
+    std::cout << "model.nv=" << model.nv << std::endl;
+    const Eigen::Tensor<double, 3>::Dimensions &d = hessian.dimensions();
+    std::cout << "dim0=" << d[0] << ", dim2=" << d[1] << ", dim3=" << d[2] << std::endl;
     
     return 0;
 

@@ -43,6 +43,12 @@ find_package(drake CONFIG REQUIRED)
 
 find_package(PythonInterp ${drake_PYTHON_VERSION} MODULE REQUIRED EXACT)
 
+find_package(pinocchio REQUIRED)
+
+find_package(Eigen3 REQUIRED)
+
+find_package(hpp-fcl REQUIRED)
+
 find_program(PYTHON_EXECUTABLE NAMES python3
         PATHS "${FIND_PYTHON_EXECUTABLE_PATHS}"
         NO_DEFAULT_PATH
@@ -57,6 +63,10 @@ find_package(PythonLibs ${drake_PYTHON_VERSION} MODULE REQUIRED EXACT)
 
 get_filename_component(PYTHONPATH
         "${drake_DIR}/../../python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages"
+        REALPATH
+        )
+get_filename_component(PYTHONPATH
+        "/opt/openrobots/lib/python3.8/site-packages"
         REALPATH
         )
 
@@ -75,6 +85,7 @@ add_subdirectory(diffcp)
 add_subdirectory(bindings)
 add_subdirectory(tests)
 add_subdirectory(examples)
+add_subdirectory(tests_yongpeng)
 
 # install(EXPORT ${CMAKE_PROJECT_NAME}
 #         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}

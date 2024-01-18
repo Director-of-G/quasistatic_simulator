@@ -70,6 +70,7 @@ void LogBarrierSolverBase::SolveOneNewtonStep(
     double lambda_squared = -Df.transpose() * dv;
     if (lambda_squared / 2 < tol_) {
       converged = true;
+      // std::cout << "Log barrier solver breaks at " << n_iters << " Newton iterations." << std::endl;
       break;
     }
     double t;

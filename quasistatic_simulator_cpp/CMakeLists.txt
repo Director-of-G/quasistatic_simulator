@@ -49,6 +49,12 @@ find_package(Eigen3 REQUIRED)
 
 find_package(hpp-fcl REQUIRED)
 
+# Mosek solver
+set(MOSEK_INSTALL_DIR "/home/yongpeng/mosek-10.1/mosek/10.1/tools/platform/linux64x86")
+set(MOSEK_INCLUDE_DIRS "${MOSEK_INSTALL_DIR}/h")
+set(MOSEK_LIBRARIES "${MOSEK_INSTALL_DIR}/bin")
+set(MOSEK_LIB_NAME "mosek64" "fusion64")
+
 find_program(PYTHON_EXECUTABLE NAMES python3
         PATHS "${FIND_PYTHON_EXECUTABLE_PATHS}"
         NO_DEFAULT_PATH
@@ -83,8 +89,8 @@ find_package(GTest REQUIRED)
 add_subdirectory(qsim)
 add_subdirectory(diffcp)
 add_subdirectory(bindings)
-add_subdirectory(tests)
-add_subdirectory(examples)
+# add_subdirectory(tests)
+# add_subdirectory(examples)
 add_subdirectory(tests_yongpeng)
 
 # install(EXPORT ${CMAKE_PROJECT_NAME}

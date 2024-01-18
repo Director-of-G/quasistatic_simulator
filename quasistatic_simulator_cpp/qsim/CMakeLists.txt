@@ -16,10 +16,13 @@ add_library(quasistatic_simulator
         quasistatic_parser.cc
         finite_differencing_gradient.h
         finite_differencing_gradient.cc)
+target_link_directories(quasistatic_simulator PUBLIC ${MOSEK_LIBRARIES})
 target_link_libraries(quasistatic_simulator optimization_derivatives
         drake::drake get_model_paths contact_computer log_barrier_solver
-        yaml-cpp)
-target_include_directories(quasistatic_simulator PUBLIC ${PROJECT_SOURCE_DIR})
+        yaml-cpp
+        ${MOSEK_LIB_NAME})
+target_include_directories(quasistatic_simulator PUBLIC 
+        ${PROJECT_SOURCE_DIR} ${MOSEK_INCLUDE_DIRS})
 
 add_library(pinocchio_calculator
         pinocchio_calculator.h

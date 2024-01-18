@@ -28,6 +28,10 @@ using std::endl;
 using std::string;
 using std::vector;
 
+// typedef Matrix<double, Dynamic, Dynamic, RowMajor> RowMatrixXd;
+using namespace mosek::fusion;
+using namespace monty;
+
 Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", " << ", ";");
 
 void CreateMbp(
@@ -670,6 +674,12 @@ void QuasistaticSimulator::ForwardSocp(
   const auto h = params.h;
   const auto n_c = phi.size();
 
+  //* solve with Mosek Fusion C++ API
+  /*
+    You can refer to test_mosek_solver.cpp
+  */
+
+  //* solve with Drake MP agent
   drake::solvers::MathematicalProgram prog;
   auto v = prog.NewContinuousVariables(n_v_, "v");
 
@@ -687,6 +697,7 @@ void QuasistaticSimulator::ForwardSocp(
   auto solver = PickBestSocpSolver(params);
   solver->Solve(prog, {}, {}, &mp_result_);
   if (!mp_result_.is_success()) {
+    std::cout << "number of contacts: " << n_c << std::endl;
     throw std::runtime_error("Quasistatic dynamics SOCP cannot be solved.");
   }
 
@@ -1023,14 +1034,61 @@ void QuasistaticSimulator::BackwardLogIcecream(
     return;
   }
 
+  // ********************************
+  // * Compute the LLT of barrier Hessian
+  // * This allows calling BackwardLogIcecream
+  // * directly without calling Forward at first
+  // ********************************
+
+  // if (!H_llt) {
+  
+  /*
+  // get problem data
+  MatrixXd Q = CalcDiffProblemData_.Q;
+  VectorXd tau_h = CalcDiffProblemData_.tau_h;
+  VectorXd phi = CalcDiffProblemData_.phi;
+
+  const auto h = params.h;
+  const auto n_c = CalcDiffProblemData_.J_list.size();
+  const auto n_v = Q.rows();
+
+  MatrixXd J(n_c * 3, n_v);
+  VectorXd phi_h_mu(n_c);
+  for (int i_c = 0; i_c < n_c; i_c++) {
+    J.block(i_c * 3, 0, 3, n_v) = CalcDiffProblemData_.J_list.at(i_c);
+    phi_h_mu[i_c] = phi[i_c] / h / cjc_->get_friction_coefficient(i_c);
+  }
+
+  // may be different from forward, because backward is a penalty problem
+  VectorXd v_star_backward;
+
+  // solve for primal optimal (v_star)
+  solver_log_icecream_->Solve(Q, -tau_h, -J, phi_h_mu,
+                              params.log_barrier_weight,
+                              params.use_free_solvers, &v_star_backward);
+
+  MatrixXd H(n_v, n_v);
+  VectorXd Df(n_v);
+
+  solver_log_icecream_->CalcGradientAndHessian(
+    Q, -tau_h, -J, phi_h_mu,
+    v_star_backward, params.log_barrier_weight,
+    &Df, &H
+  );
+  */
+  
+  // }
+
   if (params.gradient_mode == GradientMode::kBOnly) {
     CalcUnconstrainedBFromHessian(H_llt, params, q_next_dict, &Dq_nextDqa_cmd_);
+    // CalcUnconstrainedBFromHessian(H.llt(), params, q_next_dict, &Dq_nextDqa_cmd_);
     Dq_nextDq_ = MatrixXd::Zero(n_q_, n_q_);
     return;
   }
 
   if (params.gradient_mode == GradientMode::kAB) {
     CalcUnconstrainedBFromHessian(H_llt, params, q_dict, &Dq_nextDqa_cmd_);
+    // CalcUnconstrainedBFromHessian(H.llt(), params, q_dict, &Dq_nextDqa_cmd_);
 
 #ifdef VERBOSE_TIMECOST
     nowTime = std::chrono::steady_clock::now();
@@ -1040,6 +1098,8 @@ void QuasistaticSimulator::BackwardLogIcecream(
 
     Dq_nextDq_ = CalcDfDxLogIcecream(v_star, q_dict, q_next_dict, params.h,
                                      params.log_barrier_weight, H_llt);
+    // Dq_nextDq_ = CalcDfDxLogIcecream(v_star, q_dict, q_next_dict, params.h,
+    //                                  params.log_barrier_weight, H.llt());
 
 #ifdef VERBOSE_TIMECOST
     nowTime = std::chrono::steady_clock::now();

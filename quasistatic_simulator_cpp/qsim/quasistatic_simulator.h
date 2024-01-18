@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 
+#include "fusion.h"
+#include <Eigen/Dense>
 #include "diffcp/log_barrier_solver.h"
 #include "diffcp/qp_derivatives.h"
 #include "diffcp/socp_derivatives.h"
@@ -471,6 +473,12 @@ class QuasistaticSimulator {
                            const Eigen::Ref<const Eigen::VectorXd>& v_star,
                            const QuasistaticSimParameters& params,
                            const Eigen::LLT<Eigen::MatrixXd>& H_llt);
+
+//   void BackwardLogIcecream(const ModelInstanceIndexToVecMap& q_dict,
+//                            const ModelInstanceIndexToVecMap& q_next_dict,
+//                            const Eigen::Ref<const Eigen::VectorXd>& v_star,
+//                            const QuasistaticSimParameters& params,
+//                            Eigen::LLT<Eigen::MatrixXd> const* const H_llt);
 
   // TODO(yongpeng): handle the non-contact case separately
   // -----------------------------------------------------------------------

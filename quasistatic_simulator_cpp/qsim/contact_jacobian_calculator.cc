@@ -106,17 +106,29 @@ void ContactJacobianCalculator<T>::UpdateContactPairInfo(
     const auto model_A_ptr = FindModelForBody(bodyA_idx);
     const auto model_B_ptr = FindModelForBody(bodyB_idx);
 
+    cpi.geom_name_A = inspector.GetName(sdp.id_A);
+    cpi.geom_name_B = inspector.GetName(sdp.id_B);
+
+    cpi.JcA.resize(3, n_v);
+    cpi.JcB.resize(3, n_v);
+    cpi.JcA.setZero();
+    cpi.JcB.setZero();
+    cpi.JcA = CalcContactJaocibanFromPoint(context_plant, bodyA_idx, p_ACa_A);
+    cpi.JcB = CalcContactJaocibanFromPoint(context_plant, bodyB_idx, p_BCb_B);
+
     if (model_A_ptr == nullptr && model_B_ptr == nullptr) {
       throw std::logic_error(
           "One body in a contact pair is not in body_indices_");
     } else {
       if (model_A_ptr) {
-        cpi.Jc +=
-            CalcContactJaocibanFromPoint(context_plant, bodyA_idx, p_ACa_A);
+        // cpi.Jc +=
+        //     CalcContactJaocibanFromPoint(context_plant, bodyA_idx, p_ACa_A);
+        cpi.Jc += cpi.JcA;
       }
       if (model_B_ptr) {
-        cpi.Jc -=
-            CalcContactJaocibanFromPoint(context_plant, bodyB_idx, p_BCb_B);
+        // cpi.Jc -=
+        //     CalcContactJaocibanFromPoint(context_plant, bodyB_idx, p_BCb_B);
+        cpi.Jc -= cpi.JcB;
       }
     }
 
@@ -132,6 +144,9 @@ void ContactJacobianCalculator<T>::UpdateContactPairInfo(
     cpi.body_B_idx = bodyB_idx;
     cpi.id_A = sdp.id_A;
     cpi.id_B = sdp.id_B;
+
+    cpi.p_ACa = p_ACa_A;
+    cpi.p_BCb = p_BCb_B;
   }
 }
 
@@ -283,6 +298,42 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiSocp(
     J_i.row(1) = t1.transpose() * cpi.Jc;
     J_i.row(2) = t2.transpose() * cpi.Jc;
   }
+}
+
+template <class T>
+void ContactJacobianCalculator<T>::GetContactPointsAndJacobians(
+  std::vector<drake::Vector3<T>>* p_ACa_ptr,
+  std::vector<drake::Vector3<T>>* p_BCb_ptr,
+  std::vector<drake::Matrix3X<T>>* JcA_list_ptr,
+  std::vector<drake::Matrix3X<T>>* JcB_list_ptr
+) const {
+  std::vector<drake::Vector3<T>>& p_ACa = *p_ACa_ptr;
+  std::vector<drake::Vector3<T>>& p_BCb = *p_BCb_ptr;
+  std::vector<drake::Matrix3X<T>>& JcA_list = *JcA_list_ptr;
+  std::vector<drake::Matrix3X<T>>& JcB_list = *JcB_list_ptr;
+
+  p_ACa.clear();
+  p_BCb.clear();
+  JcA_list.clear();
+  JcB_list.clear();
+
+  auto n_c = contact_pairs_.size();
+  const int n_v = plant_->num_velocities();
+
+  for (int i_c=0; i_c<n_c; i_c++) {
+    const auto& cpi = contact_pairs_[i_c];
+    p_ACa.emplace_back(cpi.p_WCa);
+    p_BCb.emplace_back(cpi.p_WCb);
+
+    JcA_list.template emplace_back(3, n_v);
+    JcB_list.template emplace_back(3, n_v);
+
+    Matrix3X<T>& JcA_i = JcA_list.back();
+    Matrix3X<T>& JcB_i = JcB_list.back();
+
+    JcA_i = cpi.JcA;
+    JcB_i = cpi.JcB;
+  }  
 }
 
 template <class T>

@@ -165,6 +165,7 @@ void LogBarrierSolverBase::Solve(const Eigen::Ref<const Eigen::MatrixXd>& Q,
   try {
     SolveOneNewtonStep(Q, b, G, e, kappa_max, &v);
   } catch (std::runtime_error& exception) {
+    std::cout << "Try to solve one newton step, failed!" << std::endl;
     SolveMultipleNewtonSteps(Q, b, G, e, kappa_max, &v);
   }
 

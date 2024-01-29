@@ -21,12 +21,27 @@ struct ContactPairInfo {
   double mu{0};  // coefficient of friction.
 
   // For contact force visualization.
+  // contact points location in world frame
   drake::Vector3<T> p_WCa;
   drake::Vector3<T> p_WCb;
   drake::multibody::BodyIndex body_A_idx;
   drake::multibody::BodyIndex body_B_idx;
   drake::geometry::GeometryId id_A;
   drake::geometry::GeometryId id_B;
+
+  // TODO(yongpeng): some new features
+  // contact point in geometry's body frame
+  // this is different from p_WCa and p_WCb
+  drake::Vector3<T> p_ACa;
+  drake::Vector3<T> p_BCb;
+
+  // contact jacobian
+  drake::Matrix3X<T> JcA;
+  drake::Matrix3X<T> JcB;
+
+  // geometry name
+  std::string geom_name_A;
+  std::string geom_name_B;
 
   // TODO(yongpeng): For contact normal.
   bool is_A_manipuland{false};
@@ -82,6 +97,21 @@ class ContactJacobianCalculator {
       drake::VectorX<T>* phi_ptr, drake::MatrixX<T>* Jn_ptr,
       std::vector<drake::Matrix3X<T>>* J_list_ptr,
       drake::MatrixX<T>* Nhat_list_ptr=nullptr) const;
+
+  
+  /*
+   * GetContactPointsAndJacobian
+   * @param[in]: p_ACa_ptr, contact point in bodyA's frame
+   * @param[in]: p_BCb_ptr, contact point in bodyB's frame
+   * @param[in]: JcA_list_ptr, contact jacobian in world frame
+   * @param[in]: JcB_list_ptr, contact jacobian in world frame
+   */
+  void GetContactPointsAndJacobians(
+    std::vector<drake::Vector3<T>>* p_ACa_ptr,
+    std::vector<drake::Vector3<T>>* p_BCb_ptr,
+    std::vector<drake::Matrix3X<T>>* JcA_list_ptr,
+    std::vector<drake::Matrix3X<T>>* JcB_list_ptr
+  ) const;
 
  private:
   double GetFrictionCoefficientForSignedDistancePair(

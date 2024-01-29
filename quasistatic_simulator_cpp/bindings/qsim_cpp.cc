@@ -2,6 +2,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <chrono>
+
 #include "diffcp/log_barrier_solver.h"
 #include "diffcp/qp_derivatives.h"
 #include "diffcp/socp_derivatives.h"
@@ -135,12 +137,24 @@ PYBIND11_MODULE(qsim_cpp, m) {
              py::arg("q"), py::arg("u"), py::arg("sim_params"))
 
         // TODO(yongpeng): APIs for forward and backward dynamics
-        .def("calc_dynamics_forward",
+        .def("calc_dynamics_forward", 
+                                        // [](Class &instance,
+                                        //  const Eigen::Ref<const Eigen::VectorXd>& q,
+                                        //  const Eigen::Ref<const Eigen::VectorXd>& u,
+                                        //  const QuasistaticSimParameters& sim_params) {
+                                        //  auto startTime = std::chrono::steady_clock::now();
+                                        //  auto result = instance.CalcDynamicsForward(q, u, sim_params);
+                                        //  auto endTime = std::chrono::steady_clock::now();
+                                        //  double duration_millsecond = std::chrono::duration<double, std::milli>(endTime - startTime).count();
+                                        //  std::cout << "> CalcDynamicsForward in C++ time: " << duration_millsecond << " ms" << std::endl;
+                                        //  return result;
+                                        // },
              py::overload_cast<const Eigen::Ref<const Eigen::VectorXd>&,
                                const Eigen::Ref<const Eigen::VectorXd>&,
                                const QuasistaticSimParameters&>(
                  &Class::CalcDynamicsForward),
              py::arg("q"), py::arg("u"), py::arg("sim_params"))
+
         .def("calc_dynamics_backward",
              py::overload_cast<const QuasistaticSimParameters&>(
                  &Class::CalcDynamicsBackward),
@@ -173,6 +187,14 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def("num_dofs", &Class::num_dofs)
         .def("get_Dq_nextDq", &Class::get_Dq_nextDq)
         .def("get_Dq_nextDqa_cmd", &Class::get_Dq_nextDqa_cmd)
+        .def("get_tau_Ac", &Class::get_tau_Ac)
+        .def("get_tau_Bc", &Class::get_tau_Bc)
+        .def("get_f_Ac", &Class::get_f_Ac)
+        .def("get_f_Bc", &Class::get_f_Bc)
+        .def("get_geom_names_Ac", &Class::get_geom_names_Ac)
+        .def("get_geom_names_Bc", &Class::get_geom_names_Bc)
+        .def("get_points_Ac", &Class::get_points_Ac)
+        .def("get_points_Bc", &Class::get_points_Bc)
         .def("get_Nhat", &Class::get_Nhat)
         .def("get_Jn_list", &Class::get_Jn_list)
         .def("get_phi_list", &Class::get_phi_list)

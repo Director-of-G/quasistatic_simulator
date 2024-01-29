@@ -3,6 +3,7 @@
 #include <set>
 #include <vector>
 #include <chrono>
+#include "math.h"
 
 #include "drake/common/drake_path.h"
 #include "drake/multibody/parsing/parser.h"
@@ -393,6 +394,56 @@ void QuasistaticSimulator::CalcContactResultsSocp(
 
     // Assemble Contact info.
     AddPointPairContactInfoFromForce(cpi, -f_Ac_W, contact_results);
+  }
+}
+
+void QuasistaticSimulator::CalcContactResultsLogIcecream(
+  const std::vector<ContactPairInfo<double>>& contact_info_list,
+  const std::vector<Eigen::VectorXd>& lambda_star,
+  const double n_v,
+  const double h
+) {
+  const auto n_c = contact_info_list.size();
+  DRAKE_ASSERT(n_c == lambda_star.size());
+
+  contact_geom_names_A_.clear();
+  contact_geom_names_B_.clear();
+
+  generalized_fA_.resize(n_c, n_v);
+  generalized_fB_.resize(n_c, n_v);
+  spatial_fA_.resize(n_c, 6);
+  spatial_fB_.resize(n_c, 6);
+  contact_points_A_.resize(n_c, 3);
+  contact_points_B_.resize(n_c, 3);
+
+  generalized_fA_.setZero();
+  generalized_fB_.setZero();
+  spatial_fA_.setZero();
+  spatial_fB_.setZero();
+  contact_points_A_.setZero();
+  contact_points_B_.setZero();
+
+  for (int i_c = 0; i_c < n_c; i_c++) {
+    const auto& cpi = contact_info_list[i_c];
+
+    // Compute contact force (B exerts on A)
+    Vector3d f_Ac_W = cpi.nhat_BA_W * lambda_star[i_c][0] / cpi.mu;
+    f_Ac_W += cpi.t_W * lambda_star[i_c].tail(2);
+    f_Ac_W /= h;
+
+    // generalized force
+    Eigen::VectorXd tau_Ac = cpi.JcA.transpose() * f_Ac_W;
+    Eigen::VectorXd tau_Bc = -cpi.JcB.transpose() * f_Ac_W;
+
+    generalized_fA_.row(i_c) = tau_Ac;
+    generalized_fB_.row(i_c) = tau_Bc;
+    spatial_fA_.row(i_c).head(3) = f_Ac_W;
+    spatial_fB_.row(i_c).head(3) = -f_Ac_W;
+    contact_points_A_.row(i_c) = cpi.p_ACa;
+    contact_points_B_.row(i_c) = cpi.p_BCb;
+
+    contact_geom_names_A_.push_back(cpi.geom_name_A);
+    contact_geom_names_B_.push_back(cpi.geom_name_B);
   }
 }
 
@@ -819,7 +870,8 @@ void QuasistaticSimulator::ForwardLogIcecream(
     const std::vector<Eigen::Matrix3Xd>& J_list,
     const Eigen::Ref<const Eigen::VectorXd>& phi,
     const QuasistaticSimParameters& params,
-    ModelInstanceIndexToVecMap* q_dict_ptr, Eigen::VectorXd* v_star_ptr) {
+    ModelInstanceIndexToVecMap* q_dict_ptr, Eigen::VectorXd* v_star_ptr,
+    std::vector<Eigen::VectorXd>* lambda_star_ptr) {
   auto& q_dict = *q_dict_ptr;
 
   const auto h = params.h;
@@ -833,14 +885,21 @@ void QuasistaticSimulator::ForwardLogIcecream(
     phi_h_mu[i] = phi[i] / h / cjc_->get_friction_coefficient(i);
   }
 
+  bool calc_dual_flag = params.calc_contact_forces;
   if (n_c > 0) {
     solver_log_icecream_->Solve(Q, -tau_h, -J, phi_h_mu,
                               params.log_barrier_weight,
                               params.use_free_solvers, v_star_ptr);
+    calc_dual_flag = true;
   }
   else {
     // TODO(yongpeng): set dq*=0 to avoid infeasible phase 1 problems
     v_star_ptr->setZero(n_v);
+    calc_dual_flag = false;
+  }
+
+  if(lambda_star_ptr && calc_dual_flag) {
+    CalcDualSolutionLogIcecream(*v_star_ptr, J_list, phi, params, lambda_star_ptr);
   }
 
   // Update q_dict.
@@ -848,6 +907,36 @@ void QuasistaticSimulator::ForwardLogIcecream(
 
   // Update context_plant_ using the new q_dict.
   UpdateMbpPositions(q_dict);
+}
+
+void QuasistaticSimulator::CalcDualSolutionLogIcecream(
+  const Eigen::Ref<const Eigen::VectorXd>& v_star,
+  const std::vector<Eigen::Matrix3Xd>& J_list,
+  const Eigen::Ref<const Eigen::VectorXd>& phi,
+  const QuasistaticSimParameters& params,
+  std::vector<Eigen::VectorXd>* lambda_star_ptr
+) {
+  std::vector<Eigen::VectorXd>& lambda_star = *lambda_star_ptr;
+  lambda_star.clear();
+
+  const auto h = params.h;
+  const auto n_c = J_list.size();
+  const double kappa = params.log_barrier_weight;
+
+  for (int i_c = 0; i_c < n_c; i_c++) {
+    Eigen::Matrix3Xd J_i = J_list.at(i_c);
+    double phi_h_mu_i = phi[i_c] / h / cjc_->get_friction_coefficient(i_c);
+    Eigen::Vector3d generalized_v_i = J_i * v_star;
+    generalized_v_i[0] += phi_h_mu_i;
+    double alpha_i = pow(generalized_v_i[0], 2) - generalized_v_i.tail(2).squaredNorm();
+
+    lambda_star.emplace_back(3);
+    Eigen::VectorXd& lambda_star_i = lambda_star.back();
+    lambda_star_i[0] = generalized_v_i[0];
+    lambda_star_i.tail(2) = -generalized_v_i.tail(2);
+
+    lambda_star_i *= 2 / (alpha_i * kappa);
+  }
 }
 
 void QuasistaticSimulator::BackwardQp(
@@ -1921,7 +2010,6 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
   MatrixXd Q;
   VectorXd tau_h, phi, v_star;
 
-
   if (kPyramidModes.find(fm) != kPyramidModes.end()) {
     // Optimization coefficient matrices and vectors.
     MatrixXd Jn, J;
@@ -1965,8 +2053,17 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
     
     MatrixXd Jn;
     std::vector<Eigen::Matrix3Xd> J_list;
+
+    // auto startTime = std::chrono::steady_clock::now();
+    // auto endTime = std::chrono::steady_clock::now();
+    // double duration_millsecond = 0.0;
+
     CalcIcecreamMatrices(q_dict, q_a_cmd_dict, tau_ext_dict, params, &Q, &tau_h,
                          &Jn, &J_list, &phi);
+
+    // endTime = std::chrono::steady_clock::now();
+    // duration_millsecond = std::chrono::duration<double, std::milli>(endTime - startTime).count();
+    // std::cout << "> CalcPyramidMatrices time: " << duration_millsecond << " ms" << std::endl;
 
     if (fm == ForwardDynamicsMode::kSocpMp) {
       std::vector<Eigen::VectorXd> lambda_star_list;
@@ -1994,7 +2091,31 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
     }
 
     else if (fm == ForwardDynamicsMode::kLogIcecream) {
-      ForwardLogIcecream(Q, tau_h, J_list, phi, params, &q_next_dict, &v_star);
+      // startTime = std::chrono::steady_clock::now();
+      std::vector<Eigen::VectorXd> lambda_star_list;
+
+      ForwardLogIcecream(Q, tau_h, J_list, phi, params, &q_next_dict, &v_star, &lambda_star_list);
+
+      const auto n_v = Q.rows();
+      const auto n_c = J_list.size();
+      if (params.calc_contact_forces) {
+        CalcContactResultsLogIcecream(
+          cjc_->get_contact_pair_info_list(), lambda_star_list, n_v, params.h
+        );
+      }
+      else {
+        generalized_fA_.resize(0, n_v);
+        generalized_fB_.resize(0, n_v);
+        spatial_fA_.resize(0, 6);
+        spatial_fB_.resize(0, 6);
+        contact_points_A_.resize(0, 3);
+        contact_points_B_.resize(0, 3);
+        contact_geom_names_A_.clear();
+        contact_geom_names_B_.clear();
+      }
+      // endTime = std::chrono::steady_clock::now();
+      // duration_millsecond = std::chrono::duration<double, std::milli>(endTime - startTime).count();
+      // std::cout << "> ForwardLogIcecream time: " << duration_millsecond << " ms" << std::endl;
     }
 
     // save J_list and Jn_list

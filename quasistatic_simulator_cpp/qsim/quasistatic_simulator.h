@@ -161,6 +161,15 @@ class QuasistaticSimulator {
   Eigen::MatrixXd get_Dq_nextDq() const { return Dq_nextDq_; }
   Eigen::MatrixXd get_Dq_nextDqa_cmd() const { return Dq_nextDqa_cmd_; }
 
+  Eigen::MatrixXd get_tau_Ac() const { return generalized_fA_; }
+  Eigen::MatrixXd get_tau_Bc() const { return generalized_fB_; }
+  Eigen::MatrixXd get_f_Ac() const { return spatial_fA_; }
+  Eigen::MatrixXd get_f_Bc() const { return spatial_fB_; }
+  Eigen::MatrixXd get_points_Ac() const { return contact_points_A_; }
+  Eigen::MatrixXd get_points_Bc() const { return contact_points_B_; }
+  std::vector<std::string> get_geom_names_Ac() const { return contact_geom_names_A_; }
+  std::vector<std::string> get_geom_names_Bc() const { return contact_geom_names_B_; }
+
   std::unordered_map<drake::multibody::ModelInstanceIndex, std::vector<int>>
   GetVelocityIndices() const {
     return velocity_indices_;
@@ -394,6 +403,25 @@ class QuasistaticSimulator {
       const std::vector<Eigen::VectorXd>& lambda_star, double h,
       drake::multibody::ContactResults<double>* contact_results);
 
+  /*
+   * Calculate the contact forces as dual variables of the Log Barrier Problem.
+   * Reference: Convex Optimization, Boyd and Vandenberghe, Example 11.8
+  */
+  void CalcDualSolutionLogIcecream(
+    const Eigen::Ref<const Eigen::VectorXd>& v_star,
+    const std::vector<Eigen::Matrix3Xd>& J_list,
+    const Eigen::Ref<const Eigen::VectorXd>& phi,
+    const QuasistaticSimParameters& params,
+    std::vector<Eigen::VectorXd>* lambda_star_ptr
+  );
+
+  void CalcContactResultsLogIcecream(
+    const std::vector<ContactPairInfo<double>>& contact_info_list,
+    const std::vector<Eigen::VectorXd>& lambda_star,
+    const double n_v,
+    const double h
+  );
+
   void ForwardQp(const Eigen::Ref<const Eigen::MatrixXd>& Q,
                  const Eigen::Ref<const Eigen::VectorXd>& tau_h,
                  const Eigen::Ref<const Eigen::MatrixXd>& J,
@@ -434,7 +462,8 @@ class QuasistaticSimulator {
                           const Eigen::Ref<const Eigen::VectorXd>& phi,
                           const QuasistaticSimParameters& params,
                           ModelInstanceIndexToVecMap* q_dict_ptr,
-                          Eigen::VectorXd* v_star_ptr);
+                          Eigen::VectorXd* v_star_ptr,
+                          std::vector<Eigen::VectorXd>* lambda_star_ptr=nullptr);
 
   void BackwardQp(const Eigen::Ref<const Eigen::MatrixXd>& Q,
                   const Eigen::Ref<const Eigen::VectorXd>& tau_h,
@@ -523,6 +552,16 @@ class QuasistaticSimulator {
   std::unique_ptr<SocpDerivatives> dsocp_;
   Eigen::MatrixXd Dq_nextDq_;
   Eigen::MatrixXd Dq_nextDqa_cmd_;
+
+  // contact points and generalized forces
+  Eigen::MatrixXd generalized_fA_;      // spatial forces projected to joint space
+  Eigen::MatrixXd generalized_fB_;
+  Eigen::MatrixXd spatial_fA_;          // spatial forces (only translation part is filled) that exert on body A/B
+  Eigen::MatrixXd spatial_fB_;          // through the ith contact pair, expressed in world frame
+  Eigen::MatrixXd contact_points_A_;    // contact points on body A/B, corresponding to the ith contact pair
+  Eigen::MatrixXd contact_points_B_;    // expressed in A/B's body frame
+  std::vector<std::string> contact_geom_names_A_;     // the name of contact geometry
+  std::vector<std::string> contact_geom_names_B_;     // as they always change
 
   // Systems.
   std::unique_ptr<drake::systems::Diagram<double>> diagram_;

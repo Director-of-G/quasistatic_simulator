@@ -11,7 +11,7 @@
 # find_package(drake CONFIG REQUIRED)
 
 # Find the Mosek library
-set(MOSEK_INSTALL_DIR "/home/yongpeng/mosek-10.1/mosek/10.1/tools/platform/linux64x86")
+set(MOSEK_INSTALL_DIR "$ENV{MSK_HOME}/mosek/10.1/tools/platform/linux64x86")
 set(MOSEK_INCLUDE_DIRS "${MOSEK_INSTALL_DIR}/h")
 set(MOSEK_LIBRARIES "${MOSEK_INSTALL_DIR}/bin")
 set(MOSEK_LIB_NAME "mosek64" "fusion64")

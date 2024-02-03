@@ -59,7 +59,7 @@ void CreateMbp(
       "drake_manipulation_models",
       drake::MaybeGetDrakePath().value() + "/manipulation/models");
   parser.package_map().Add("iiwa_controller", GetRoboticsUtilitiesModelsPath());
-  parser.package_map().Add("idto_models", "/home/yongpeng/research/projects/contact_rich/idto/examples/models");
+  // parser.package_map().Add("idto_models", "/home/yongpeng/research/projects/contact_rich/idto/examples/models");
 
   // Objects.
   // Use a Set to sort object names.

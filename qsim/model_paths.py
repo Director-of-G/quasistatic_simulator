@@ -28,7 +28,7 @@ package_paths_dict = {
     "drake_manipulation_models": drake_manipulation_models_path,
     # "drake_models": drake_manipulation_models_path,
     "iiwa_controller": iiwa_controller_models_path,
-    "idto_models": idto_solver_models_path,
+    # "idto_models": idto_solver_models_path,
 }
 
 

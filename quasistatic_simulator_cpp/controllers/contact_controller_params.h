@@ -15,4 +15,6 @@ struct ContactControllerParameters {
 
   double time_step{0.01};
   int horizon_length{5};
+
+  bool calc_torque_feedforward{false};
 };

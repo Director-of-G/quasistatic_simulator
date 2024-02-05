@@ -102,6 +102,10 @@ ContactController::ContactController(
     Kda_inv_ = Kda_.inverse();
     nc_ = 4;
     nqa_ = plant_->num_actuated_dofs();
+
+    tau_feed_forward_.resize(nqa_);
+    fext_feed_forward_.resize(3 * nc_);
+    fext_feed_forward_.setZero();
 }
 
 Eigen::VectorXd ContactController::Step(
@@ -137,6 +141,13 @@ void ContactController::Set_Xref(
     const std::vector<Eigen::VectorXd>& x_ref
 ) {
     x_ref_ = x_ref;
+}
+
+void ContactController::Set_Fext(
+    const Eigen::Ref<const Eigen::VectorXd>& f_ext
+) {
+    DRAKE_ASSERT(fext_feed_forward_.size() == f_ext.size());
+    fext_feed_forward_ = f_ext;
 }
 
 void ContactController::SolveSparseMPC(
@@ -208,11 +219,16 @@ void ContactController::CalcStiffAndJacobian(
 
     Kbar_all.clear();
     J_all.clear();
+    contact_measurements_.clear();
 
     for (int i_c=0; i_c<nc_; i_c++) {
         Kbar_all.emplace_back(3, 3);
         J_all.emplace_back(3, nqa_);
+        contact_measurements_.emplace_back(3);
+        contact_measurements_.back().setZero();
     }
+
+    tau_feed_forward_.setZero();
 
     const drake::geometry::QueryObject<double>& query_object =
       plant()
@@ -319,6 +335,16 @@ void ContactController::CalcStiffAndJacobian(
         Ke_ = R_WC.matrix() * Ke_ * R_WC.matrix().transpose();        
         Eigen::MatrixXd Kp_inv_i = Ja * Kpa_.inverse() * Ja.transpose();
         Kbar = (Eigen::MatrixXd::Identity(3, 3) + Ke_ * Kp_inv_i).inverse() * Ke_;
+
+        // contact measurements
+        Eigen::VectorXd& contact_meas = contact_measurements_.at(index_);
+        contact_meas << pair.distance, vn, vt.norm();
+
+        if (params_.calc_torque_feedforward) {
+            Eigen::VectorXd f_ext_i = fext_feed_forward_(Eigen::seqN(3*index_, 3));
+            tau_feed_forward_ += Ja.transpose() * f_ext_i;
+        }
+
     }
 }
 

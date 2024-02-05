@@ -22,6 +22,7 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def_readwrite("weight_du", &Class::weight_du)
         .def_readwrite("time_step", &Class::time_step)
         .def_readwrite("horizon_length", &Class::horizon_length)
+        .def_readwrite("calc_torque_feedforward", &Class::calc_torque_feedforward)
         .def("__copy__",
              [](const Class& self) {
                return Class(self);
@@ -53,9 +54,15 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
               py::overload_cast<const std::vector<Eigen::VectorXd>&>
               (&Class::Set_Xref),
                   py::arg("x_ref"))
+        .def("set_fext_feedforward",
+              py::overload_cast<const Eigen::Ref<const Eigen::VectorXd>&>
+              (&Class::Set_Fext),
+                  py::arg("fext_ff"))
         .def("get_Ad", &Class::Get_Ad)
         .def("get_Bd", &Class::Get_Bd)
         .def("get_Ac", &Class::Get_Ac)
-        .def("get_Bc", &Class::Get_Bc);
+        .def("get_Bc", &Class::Get_Bc)
+        .def("get_phi_vn_vt", &Class::Get_phi_vn_vt)
+        .def("get_tau_feedforward", &Class::Get_tau_feedforward);
   }
 }

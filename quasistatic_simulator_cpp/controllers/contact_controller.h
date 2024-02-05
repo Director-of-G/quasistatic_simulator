@@ -50,10 +50,16 @@ class ContactController {
             const std::vector<Eigen::VectorXd>& x_ref
         );
 
+        void Set_Fext(
+            const Eigen::Ref<const Eigen::VectorXd>& f_ext
+        );
+
         Eigen::MatrixXd Get_Ad () const { return A_discrete_; }
         Eigen::MatrixXd Get_Bd () const { return B_discrete_; }
         Eigen::MatrixXd Get_Ac () const { return A_continuous_; }
         Eigen::MatrixXd Get_Bc () const { return B_continuous_; }
+        std::vector<Eigen::VectorXd> Get_phi_vn_vt () const { return contact_measurements_; }
+        Eigen::VectorXd Get_tau_feedforward() const { return tau_feed_forward_; }
 
     private:
 
@@ -126,6 +132,10 @@ class ContactController {
 
         std::vector<Eigen::VectorXd> x_ref_;
         Eigen::VectorXd x0_;
+        Eigen::VectorXd fext_feed_forward_;
+
+        std::vector<Eigen::VectorXd> contact_measurements_;
+        Eigen::VectorXd tau_feed_forward_;
 
         int nc_{4};
         int nqa_{16};

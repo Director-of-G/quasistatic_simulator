@@ -1,0 +1,132 @@
+#pragma once
+#include <iostream>
+
+#include <string>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
+
+#include <drake/common/find_resource.h>
+#include <drake/geometry/proximity_properties.h>
+#include <drake/geometry/meshcat.h>
+#include <drake/geometry/scene_graph.h>
+#include <drake/geometry/scene_graph_inspector.h>
+#include <drake/geometry/query_object.h>
+#include <drake/geometry/query_results/signed_distance_pair.h>
+#include <drake/math/rotation_matrix.h>
+#include <drake/multibody/parsing/parser.h>
+#include <drake/multibody/math/spatial_velocity.h>
+#include <drake/multibody/plant/multibody_plant.h>
+#include <drake/multibody/plant/multibody_plant_config_functions.h>
+#include <drake/multibody/tree/fixed_offset_frame.h>
+#include <drake/multibody/tree/revolute_joint.h>
+#include "drake/solvers/decision_variable.h"
+#include "drake/solvers/mathematical_program.h"
+#include "drake/solvers/mathematical_program_result.h"
+#include "drake/solvers/osqp_solver.h"
+#include <drake/systems/analysis/simulator.h>
+#include <drake/systems/framework/diagram_builder.h>
+
+#include "controllers/contact_controller_params.h"
+#include "controllers/contact_model.h"
+
+
+class ContactController {
+    public:
+        ContactController(
+            const std::string& model_path,
+            ContactControllerParameters controller_params
+        );
+
+        Eigen::VectorXd Step(
+            const Eigen::Ref<const Eigen::VectorXd>& q,
+            const Eigen::Ref<const Eigen::VectorXd>& v
+        );
+
+        void Set_X0(
+            const Eigen::Ref<const Eigen::VectorXd>& x0
+        );
+
+        void Set_Xref(
+            const std::vector<Eigen::VectorXd>& x_ref
+        );
+
+        Eigen::MatrixXd Get_Ad () const { return A_discrete_; }
+        Eigen::MatrixXd Get_Bd () const { return B_discrete_; }
+        Eigen::MatrixXd Get_Ac () const { return A_continuous_; }
+        Eigen::MatrixXd Get_Bc () const { return B_continuous_; }
+
+    private:
+
+        void SetPlantPositionsAndVelocities(
+            const Eigen::Ref<const Eigen::VectorXd>& q,
+            const Eigen::Ref<const Eigen::VectorXd>& v
+        );
+
+        void CalcStiffAndJacobian(
+            std::vector<Eigen::MatrixXd>* Kbar_all_ptr,
+            std::vector<Eigen::MatrixXd>* J_all_ptr
+        );
+
+        void CalcMPCProblemMatrices(
+            const std::vector<Eigen::MatrixXd>& Kbar_all,
+            const std::vector<Eigen::MatrixXd>& J_all,
+            Eigen::MatrixXd* A_mat, Eigen::MatrixXd* B_mat,
+            Eigen::MatrixXd* Q_mat, Eigen::MatrixXd* R_mat,
+            Eigen::MatrixXd* delR_mat
+        );
+
+        void ContinuousToDiscrete(
+            const Eigen::Ref<const Eigen::MatrixXd>& Ac,
+            const Eigen::Ref<const Eigen::MatrixXd>& Bc,
+            double h,
+            Eigen::MatrixXd* Ad_ptr,
+            Eigen::MatrixXd* Bd_ptr
+        );
+
+        void SolveSparseMPC(
+            const Eigen::Ref<const Eigen::MatrixXd>& A,
+            const Eigen::Ref<const Eigen::MatrixXd>& B,
+            const Eigen::Ref<const Eigen::MatrixXd>& Q,
+            const Eigen::Ref<const Eigen::MatrixXd>& R,
+            const Eigen::Ref<const Eigen::MatrixXd>& delR,
+            const std::vector<Eigen::VectorXd>& x_ref,
+            const Eigen::Ref<const Eigen::VectorXd>& x0,
+            Eigen::VectorXd* u0
+        );
+
+        ContactControllerParameters params_;
+
+        const drake::multibody::MultibodyPlant<double>& plant() const { return *plant_; }
+
+        std::unique_ptr<drake::systems::Diagram<double>> diagram_;
+        drake::multibody::MultibodyPlant<double>* plant_{nullptr};
+        drake::geometry::SceneGraph<double>* scene_graph_{nullptr};
+
+        std::unique_ptr<drake::systems::Context<double>> diagram_context_;
+        drake::systems::Context<double>* plant_context_{nullptr};
+
+        std::unique_ptr<CompliantContactModel> contact_model_;
+
+        std::unique_ptr<drake::solvers::OsqpSolver> solver_osqp_;
+        mutable drake::solvers::MathematicalProgramResult mp_result_;
+
+        const std::vector<std::string> finger_geom_name_list_{"allegro_hand_right::link_15_tip_collision_2",
+                                                              "allegro_hand_right::link_3_tip_collision_1",
+                                                              "allegro_hand_right::link_7_tip_collision_1",
+                                                              "allegro_hand_right::link_11_tip_collision_1"};
+
+        Eigen::VectorXd q_;
+        Eigen::VectorXd v_;
+
+        Eigen::MatrixXd Kpa_;
+        Eigen::MatrixXd Kda_, Kda_inv_;
+
+        Eigen::MatrixXd A_discrete_, B_discrete_;
+        Eigen::MatrixXd A_continuous_, B_continuous_;
+
+        std::vector<Eigen::VectorXd> x_ref_;
+        Eigen::VectorXd x0_;
+
+        int nc_{4};
+        int nqa_{16};
+};

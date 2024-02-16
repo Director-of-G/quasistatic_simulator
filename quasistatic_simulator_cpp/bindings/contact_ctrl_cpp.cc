@@ -23,6 +23,9 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def_readwrite("time_step", &Class::time_step)
         .def_readwrite("horizon_length", &Class::horizon_length)
         .def_readwrite("calc_torque_feedforward", &Class::calc_torque_feedforward)
+        .def_readwrite("is_3d_floating", &Class::is_3d_floating)
+        .def_readwrite("hand_base_trans", &Class::hand_base_trans)
+        .def_readwrite("hand_base_rot", &Class::hand_base_rot)
         .def("__copy__",
              [](const Class& self) {
                return Class(self);

@@ -8,9 +8,11 @@ using drake::multibody::Body;
 using drake::multibody::BodyIndex;
 using drake::geometry::Cylinder;
 using drake::geometry::GeometryId;
+using drake::geometry::GeometrySet;
 using drake::geometry::ProximityProperties;
 using drake::geometry::QueryObject;
 using drake::geometry::Rgba;
+using drake::geometry::SceneGraph;
 using drake::geometry::Sphere;
 using drake::geometry::SignedDistancePair;
 using drake::math::RigidTransform;
@@ -29,39 +31,41 @@ using Eigen::Vector3d;
 
 Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 
-ContactController::ContactController(
-    const std::string& model_path,
-    ContactControllerParameters controller_params
-): params_(std::move(controller_params)),
-   solver_osqp_(std::make_unique<drake::solvers::OsqpSolver>()) {
-    // Set up the system diagram for the simulator
-    drake::systems::DiagramBuilder<double> builder;
-    drake::multibody::MultibodyPlantConfig config;
-    config.time_step = 0.001;
-    auto [plant, scene_graph] =
-      drake::multibody::AddMultibodyPlant(config, &builder);
 
-    // Create plant model
+void AddFreeFloatingSphereToPlant(MultibodyPlant<double>* plant_ptr) {
+
     const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
-    const drake::Vector4<double> black(0.0, 0.0, 0.0, 1.0);
 
-    // Add a model of the hand
-    Parser(&plant).AddModels(model_path);
-    RigidTransformd X_hand(RollPitchYawd(0, -M_PI_2, 0), Vector3d(0, 0, 0));
-    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("hand_root"),
-                      X_hand);
-
-    // // Define gravity (so we can turn the hand upside down)
-    // if (FLAGS_upside_down) {
-    //   plant->mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 9.81));
-    // }
-
-    // Disable gravity
-    plant.mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 0));
+    MultibodyPlant<double>& plant = *plant_ptr;
 
     // Add a free-floating ball
     ModelInstanceIndex ball_idx = plant.AddModelInstance("ball");
 
+    // Not matters, since we only use the kinematics at this time
+    const double mass = 0.05;
+    const double radius = 0.06;
+
+    const SpatialInertia<double> I(mass, Vector3d::Zero(),
+                                   UnitInertia<double>::SolidSphere(radius));
+    const RigidBody<double>& ball = plant.AddRigidBody("ball", ball_idx, I);
+
+    plant.RegisterVisualGeometry(ball, RigidTransformd::Identity(),
+                                  Sphere(radius), "ball_visual", blue);
+    plant.RegisterCollisionGeometry(ball, RigidTransformd::Identity(),
+                                     Sphere(radius), "ball_collision",
+                                     CoulombFriction<double>());
+
+}
+
+void AddRotationOnlySphereToPlant(MultibodyPlant<double>* plant_ptr) {
+    const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
+
+    MultibodyPlant<double>& plant = *plant_ptr;
+    
+    // Add a free-floating ball
+    ModelInstanceIndex ball_idx = plant.AddModelInstance("ball");
+
+    // Not matters, since we only use the kinematics at this time
     const double mass = 0.05;
     const double radius = 0.06;
 
@@ -85,9 +89,129 @@ ContactController::ContactController(
         {},
         Eigen::Vector3d::UnitZ()
     );
+}
+
+void AddEnvironmentsToPlant(MultibodyPlant<double>* plant_ptr) {
+    const drake::Vector4<double> brown(0.871, 0.722, 0.529, 0.8);
+
+    MultibodyPlant<double>& plant = *plant_ptr;
+
+    // Add table
+    ModelInstanceIndex table_idx = plant.AddModelInstance("table");
+
+    const double mass = 1.0;
+    const SpatialInertia<double> I(mass, Vector3d::Zero(),
+                                   UnitInertia<double>::SolidBox(0.5, 0.5, 0.0235));
+
+    const RigidBody<double>& table = plant.AddRigidBody("table_link", table_idx, I);
+
+    plant.RegisterVisualGeometry(table, RigidTransformd::Identity(),
+                                  Box(Vector3d(0.5, 0.5, 0.0235)), "visual", brown);
+    plant.RegisterCollisionGeometry(table, RigidTransformd::Identity(),
+                                     Box(Vector3d(0.5, 0.5, 0.0235)), "collision",
+                                     CoulombFriction<double>());
+
+    RigidTransformd X_table;
+    const drake::multibody::WeldJoint<double>& table_root_joint = plant.AddJoint<drake::multibody::WeldJoint>(
+        "table_weld_joint",
+        plant.world_body(),
+        {},
+        table,
+        {},
+        X_table
+    );
+}
+
+void ExcludeRobotCollisionWithEnvs(
+    MultibodyPlant<double>* plant_ptr,
+    SceneGraph<double>* scene_graph_ptr
+) {
+    GeometrySet robot_geom_set, env_geom_set;
+
+    // Get the geometry set of robot
+    int counter = 0;
+    ModelInstanceIndex robot = plant_ptr->GetModelInstanceByName("allegro_hand_right");
+    for (BodyIndex body_index : plant_ptr->GetBodyIndices(robot)) {
+        const auto& body = plant_ptr->get_body(body_index);
+
+        for (const auto& geometry_id : plant_ptr->GetCollisionGeometriesForBody(body)) {
+            robot_geom_set.Add(geometry_id);
+            counter++;
+        }
+    }
+
+    // Get the geometry set of environment
+    counter = 0;
+    ModelInstanceIndex env = plant_ptr->GetModelInstanceByName("table");
+    for (BodyIndex body_index : plant_ptr->GetBodyIndices(env)) {
+        const auto& body = plant_ptr->get_body(body_index);
+
+        for (const auto& geometry_id : plant_ptr->GetCollisionGeometriesForBody(body)) {
+            env_geom_set.Add(geometry_id);
+            counter++;
+        }
+    }
+
+    // Exclude collisions
+    drake::geometry::CollisionFilterManager manager = scene_graph_ptr->collision_filter_manager();
+
+    manager.Apply(
+        drake::geometry::CollisionFilterDeclaration()
+            .ExcludeBetween(robot_geom_set, env_geom_set)
+    );
+}
+
+ContactController::ContactController(
+    const std::string& model_path,
+    ContactControllerParameters controller_params
+): params_(std::move(controller_params)),
+   solver_osqp_(std::make_unique<drake::solvers::OsqpSolver>()) {
+    // Set up the system diagram for the simulator
+    drake::systems::DiagramBuilder<double> builder;
+    drake::multibody::MultibodyPlantConfig config;
+    config.time_step = 0.001;
+    auto [plant, scene_graph] =
+      drake::multibody::AddMultibodyPlant(config, &builder);
+
+    // Create plant model
+    const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
+    const drake::Vector4<double> black(0.0, 0.0, 0.0, 1.0);
+
+    // Add a model of the hand
+    Parser(&plant).AddModels(model_path);
+
+    Vector3d hand_trans(controller_params.hand_base_trans);
+    Vector3d hand_rot(controller_params.hand_base_rot);
+    RigidTransformd X_hand(
+        RollPitchYawd(hand_rot),
+        hand_trans
+    );
+    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("hand_root"),
+                      X_hand);
+
+    // // Define gravity (so we can turn the hand upside down)
+    // if (FLAGS_upside_down) {
+    //   plant->mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 9.81));
+    // }
+
+    // Disable gravity
+    plant.mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 0));
+
+    // Add manipuland and environment
+    if (controller_params.is_3d_floating) {
+        AddFreeFloatingSphereToPlant(&plant);
+        AddEnvironmentsToPlant(&plant);
+    } else {
+        AddRotationOnlySphereToPlant(&plant);
+    }
 
     // Finalize and build
     plant.Finalize();
+
+    if (controller_params.is_3d_floating) {
+        ExcludeRobotCollisionWithEnvs(&plant, &scene_graph);
+    }
+
     diagram_ = builder.Build();
     diagram_context_ = diagram_->CreateDefaultContext();
     plant_context_ = &(diagram_->GetMutableSubsystemContext(plant, diagram_context_.get()));
@@ -119,7 +243,7 @@ Eigen::VectorXd ContactController::Step(
 
     Eigen::MatrixXd Q, R, delR;
     CalcMPCProblemMatrices(Kbar_list, J_list, &A_continuous_, &B_continuous_, &Q, &R, &delR);
-    
+
     // std::cout << "continuous A mat " << Ac.format(CleanFmt) << std::endl;
     // std::cout << "continuous B mat " << Bc.format(CleanFmt) << std::endl;
 

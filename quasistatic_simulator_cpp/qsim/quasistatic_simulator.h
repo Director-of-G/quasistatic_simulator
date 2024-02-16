@@ -130,6 +130,11 @@ class QuasistaticSimulator {
     return is_3d_floating_.at(m);
   }
 
+  [[nodiscard]] bool is_model_fixed(
+      drake::multibody::ModelInstanceIndex m) const {
+    return is_model_fixed_.at(m);
+  }
+
   const drake::geometry::QueryObject<double>& get_query_object() const {
     return *query_object_;
   }
@@ -601,6 +606,8 @@ class QuasistaticSimulator {
   std::set<drake::multibody::ModelInstanceIndex> models_all_;
   std::unordered_map<drake::multibody::ModelInstanceIndex, bool>
       is_3d_floating_;
+  std::unordered_map<drake::multibody::ModelInstanceIndex, bool>
+      is_model_fixed_;
   ModelInstanceIndexToVecMap robot_stiffness_;
   double min_K_a_{0};  // smallest stiffness of all joints.
   std::unordered_map<drake::multibody::ModelInstanceIndex, std::vector<int>>

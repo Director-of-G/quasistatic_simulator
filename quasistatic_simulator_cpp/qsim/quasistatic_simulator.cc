@@ -147,6 +147,11 @@ QuasistaticSimulator::QuasistaticSimulator(
   for (const auto& model : models_unactuated_) {
     const auto n_v = plant_->num_velocities(model);
     const auto n_q = plant_->num_positions(model);
+    if (n_v == 0) {
+      is_model_fixed_[model] = true;
+    } else {
+      is_model_fixed_[model] = false;
+    }
     if (n_v == 6 && n_q == 7) {
       const auto body_indices = plant_->GetBodyIndices(model);
       DRAKE_THROW_UNLESS(body_indices.size() == 1);
@@ -297,6 +302,7 @@ void QuasistaticSimulator::CalcQAndTauH(
   }
 
   for (const auto& model : models_unactuated_) {
+    if (is_model_fixed(model)) continue;
     const auto& idx_v = velocity_indices_.at(model);
     const auto n_v_i = idx_v.size();
     const VectorXd& tau_ext = tau_ext_dict.at(model);
@@ -1718,6 +1724,7 @@ void QuasistaticSimulator::CalcGravityForUnactuatedModels(
       plant_->CalcGravityGeneralizedForces(*context_plant_);
 
   for (const auto& model : models_unactuated_) {
+    if (is_model_fixed(model)) continue;
     const auto& indices = velocity_indices_.at(model);
     const int n_v_i = indices.size();
     (*tau_ext)[model] = VectorXd(n_v_i);
@@ -1844,7 +1851,7 @@ void QuasistaticSimulator::AddDNDq2A(
     drake::EigenPtr<Eigen::MatrixXd> A_ptr) const {
   Eigen::Matrix4d E;
   for (const auto& model : models_unactuated_) {
-    if (!is_model_floating(model)) {
+    if (!is_model_floating(model) || is_model_fixed(model)) {
       continue;
     }
     const auto idx_v_model = GetIndicesAsVec(model, ModelIndicesMode::kV);
@@ -1900,8 +1907,11 @@ ModelInstanceIndexToMatrixMap QuasistaticSimulator::CalcScaledMassMatrix(
   plant_->CalcMassMatrix(*context_plant_, &M);
 
   ModelInstanceIndexToMatrixMap M_u_dict;
+  double counter = 0;
   for (const auto& model : models_unactuated_) {
+    if (is_model_fixed(model)) continue;
     const auto& idx_v_model = velocity_indices_.at(model);
+    if (idx_v_model.size() == 0) continue;
     M_u_dict[model] = M(idx_v_model, idx_v_model);
   }
 
@@ -1912,6 +1922,7 @@ ModelInstanceIndexToMatrixMap QuasistaticSimulator::CalcScaledMassMatrix(
   std::unordered_map<drake::multibody::ModelInstanceIndex, double>
       max_eigen_value_M_u;
   for (const auto& model : models_unactuated_) {
+    if (is_model_fixed(model)) continue;
     // TODO(pang): use the eigen value instead of maximum
     max_eigen_value_M_u[model] = M_u_dict.at(model).diagonal().maxCoeff();
   }

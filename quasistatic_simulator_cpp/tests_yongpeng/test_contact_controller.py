@@ -7,6 +7,9 @@ from contact_ctrl_cpp import ContactControllerParameters, ContactControllerCpp
 model_path = "/dex_playground/mujoco_playground/contact_model/test_CQDC_model/models/sdf/allegro_3d_4finger.sdf"
 
 params = ContactControllerParameters()
+params.is_3d_floating = True
+params.hand_base_trans = np.array([0.06, 0.0, 0.072])
+params.hand_base_rot = np.array([0.0, 0.0, 0.0])
 controller = ContactControllerCpp(model_path, params)
 
 q_init = np.array([
@@ -14,7 +17,8 @@ q_init = np.array([
     0.0, 0.6, 1.0, 1.0,                 # middle finger
     -0.2, 0.95, 1.0, 1.0,                # ring finger
     0.5, 1.85, 1.0, 1.0,                 # thumb
-    0.0     # ball
+    # 0.0     # ball
+    1.0, 0.0, 0.0, 0.0, 0.06, 0.0, 0.072    # ball
 ])
 
 v_init = np.array([
@@ -22,7 +26,7 @@ v_init = np.array([
     0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0,
-    0.0
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 ])
 
 controller.step(q_init, v_init)

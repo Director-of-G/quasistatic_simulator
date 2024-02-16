@@ -6,23 +6,32 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <drake/common/find_resource.h>
+
 #include <drake/geometry/proximity_properties.h>
 #include <drake/geometry/meshcat.h>
 #include <drake/geometry/scene_graph.h>
 #include <drake/geometry/scene_graph_inspector.h>
+#include <drake/geometry/geometry_set.h>
 #include <drake/geometry/query_object.h>
 #include <drake/geometry/query_results/signed_distance_pair.h>
+#include <drake/geometry/collision_filter_manager.h>
+#include <drake/geometry/collision_filter_declaration.h>
+
 #include <drake/math/rotation_matrix.h>
+
 #include <drake/multibody/parsing/parser.h>
 #include <drake/multibody/math/spatial_velocity.h>
 #include <drake/multibody/plant/multibody_plant.h>
 #include <drake/multibody/plant/multibody_plant_config_functions.h>
 #include <drake/multibody/tree/fixed_offset_frame.h>
 #include <drake/multibody/tree/revolute_joint.h>
+#include <drake/multibody/tree/weld_joint.h>
+
 #include "drake/solvers/decision_variable.h"
 #include "drake/solvers/mathematical_program.h"
 #include "drake/solvers/mathematical_program_result.h"
 #include "drake/solvers/osqp_solver.h"
+
 #include <drake/systems/analysis/simulator.h>
 #include <drake/systems/framework/diagram_builder.h>
 

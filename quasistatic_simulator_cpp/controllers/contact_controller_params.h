@@ -17,4 +17,7 @@ struct ContactControllerParameters {
   int horizon_length{5};
 
   bool calc_torque_feedforward{false};
+  bool is_3d_floating{false};
+
+  Eigen::Vector3d hand_base_trans, hand_base_rot;
 };

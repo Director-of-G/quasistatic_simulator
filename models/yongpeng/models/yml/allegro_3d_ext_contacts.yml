@@ -3,7 +3,7 @@ model_directive: package://quasistatic_simulator/yongpeng/models/yml/allegro_3d_
 robots:
   -
     name: allegro_hand_right
-    Kp: [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]
+    Kp: [800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800]
 
 objects:
   -

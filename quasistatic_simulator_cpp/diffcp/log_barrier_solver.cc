@@ -106,7 +106,7 @@ void LogBarrierSolverBase::SolveMultipleNewtonSteps(
     SolveOneNewtonStep(Q, b, G, e, kappa, v_star_ptr);
     kappa = std::min(kappa_max, kappa * 2);
     if (kappa == kappa_max) {
-      std::cout << "> it took " << n_iters << " to solve the log barrier problem" << std::endl;
+      // std::cout << "> it took " << n_iters << " to solve the log barrier problem" << std::endl;
       break;
     }
   }
@@ -165,7 +165,7 @@ void LogBarrierSolverBase::Solve(const Eigen::Ref<const Eigen::MatrixXd>& Q,
   try {
     SolveOneNewtonStep(Q, b, G, e, kappa_max, &v);
   } catch (std::runtime_error& exception) {
-    std::cout << "Try to solve one newton step, failed!" << std::endl;
+    // std::cout << "Try to solve one newton step, failed!" << std::endl;
     SolveMultipleNewtonSteps(Q, b, G, e, kappa_max, &v);
   }
 

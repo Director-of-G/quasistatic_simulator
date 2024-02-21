@@ -22,8 +22,11 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def_readwrite("weight_du", &Class::weight_du)
         .def_readwrite("time_step", &Class::time_step)
         .def_readwrite("horizon_length", &Class::horizon_length)
+        .def_readwrite("robot_kp", &Class::robot_kp)
+        .def_readwrite("robot_kd", &Class::robot_kd)
         .def_readwrite("calc_torque_feedforward", &Class::calc_torque_feedforward)
         .def_readwrite("is_3d_floating", &Class::is_3d_floating)
+        .def_readwrite("enable_multi_contact", &Class::enable_multi_contact)
         .def_readwrite("hand_base_trans", &Class::hand_base_trans)
         .def_readwrite("hand_base_rot", &Class::hand_base_rot)
         .def("__copy__",

@@ -16,8 +16,12 @@ struct ContactControllerParameters {
   double time_step{0.01};
   int horizon_length{5};
 
+  double robot_kp{0.5};
+  double robot_kd{1e-3};
+
   bool calc_torque_feedforward{false};
   bool is_3d_floating{false};
+  bool enable_multi_contact{false};
 
   Eigen::Vector3d hand_base_trans, hand_base_rot;
 };

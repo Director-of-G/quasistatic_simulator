@@ -240,10 +240,17 @@ Eigen::VectorXd ContactController::Step(
     SetPlantPositionsAndVelocities(q, v);
 
     std::vector<Eigen::MatrixXd> Kbar_list, J_list;
-    CalcStiffAndJacobian(&Kbar_list, &J_list);
+    std::vector<Eigen::MatrixXd> G_list, Ke_list;
+    CalcStiffAndJacobian(&Kbar_list, &J_list, &G_list, &Ke_list);
+
+    Eigen::MatrixXd B_Fe;
+    B_Fe.setZero(3*nc_, nqa_);
+    if (params_.enable_multi_contact) {
+        CalcActuationMatrix(J_list, G_list, Ke_list, &B_Fe);
+    }
 
     Eigen::MatrixXd Q, R, delR;
-    CalcMPCProblemMatrices(Kbar_list, J_list, &A_continuous_, &B_continuous_, &Q, &R, &delR);
+    CalcMPCProblemMatrices(Kbar_list, J_list, B_Fe, &A_continuous_, &B_continuous_, &Q, &R, &delR);
 
     // std::cout << "continuous A mat " << Ac.format(CleanFmt) << std::endl;
     // std::cout << "continuous B mat " << Bc.format(CleanFmt) << std::endl;
@@ -500,16 +507,24 @@ void ContactController::CalcStiffAndJacobian(
 void ContactController::CalcActuationMatrix(
     const std::vector<Eigen::MatrixXd>& J_all,
     const std::vector<Eigen::MatrixXd>& G_all,
-    const std::vector<Eigen::MatrixXd>& Ke_all
+    const std::vector<Eigen::MatrixXd>& Ke_all,
+    Eigen::MatrixXd* B_Fe_ptr
 ) {
-    Eigen::MatrixXd Ko(nvu_, nvu_);
-    Ko.setZero();
+    Eigen::MatrixXd Ko, Ko_inv;
+    Ko.setZero(nvu_, nvu_);
+    Ko_inv.setZero(nvu_, nvu_);
 
-    for (int i_c=0; i_c<n_c; i_c++) {
-        Ko += G_all.at(i_c).transpose() * Ke_all.at(i_c) * G_all.at(i_c);
+    for (int i_c=0; i_c<nc_; i_c++) {
+        Eigen::MatrixXd G_trans_i = G_all.at(i_c).topRows(3);
+        Ko += G_trans_i.transpose() * Ke_all.at(i_c) * G_trans_i;
     }
     // TODO(yongpeng) Ko is actually singular, how to deal with this?
-    Ko_inv = Ko.inverse();
+    // Ko_inv = Ko.inverse();
+    // TODO(yongpeng) Currently set Ko^{-1} manually
+    Ko_inv.setIdentity();
+    Ko_inv *= 1e-2;
+    // std::cout << "Calculated Ko=" << Ko.format(CleanFmt) << std::endl;
+    // std::cout << "Calculated Ko_inv=" << Ko_inv.format(CleanFmt) << std::endl;
 
     Eigen::MatrixXd G_stack, K_bar, J_stack;
     G_stack.setZero(3*nc_, nvu_);
@@ -524,11 +539,13 @@ void ContactController::CalcActuationMatrix(
 
     Eigen::MatrixXd B_Fe = Eigen::MatrixXd::Identity(3*nc_, 3*nc_) + (1./kpa_) * K_bar * J_stack.transpose() + G_stack * Ko_inv * G_stack.transpose();
     B_Fe = B_Fe.inverse() * K_bar;
+    *B_Fe_ptr = B_Fe;
 }
 
 void ContactController::CalcMPCProblemMatrices(
     const std::vector<Eigen::MatrixXd>& Kbar_all,
     const std::vector<Eigen::MatrixXd>& J_all,
+    const Eigen::MatrixXd& B_Fe,
     Eigen::MatrixXd* A_mat_ptr, Eigen::MatrixXd* B_mat_ptr,
     Eigen::MatrixXd* Q_mat_ptr, Eigen::MatrixXd* R_mat_ptr,
     Eigen::MatrixXd* delR_mat_ptr
@@ -557,7 +574,15 @@ void ContactController::CalcMPCProblemMatrices(
 
     for (int i_c = 0; i_c < nc_; i_c++) {
         A_mat.block(0, 2*nqa_+3*i_c, nqa_, 3) = -Kda_inv_ * J_all.at(i_c).transpose();
-        B_mat.block(2*nqa_+3*i_c, 0, 3, n_u) = Kbar_all.at(i_c) * J_all.at(i_c);
+    }
+
+    if (!params_.enable_multi_contact) {
+        // treat each contact separately
+        for (int i_c = 0; i_c < nc_; i_c++) {
+            B_mat.block(2*nqa_+3*i_c, 0, 3, n_u) = Kbar_all.at(i_c) * J_all.at(i_c);
+        }
+    } else {
+        B_mat.block(2*nqa_, 0, 3*nc_, n_u) = B_Fe;
     }
 
     Q_mat.block(0, 0, nqa_, nqa_) = params_.weight_q * Eigen::MatrixXd::Identity(nqa_, nqa_);

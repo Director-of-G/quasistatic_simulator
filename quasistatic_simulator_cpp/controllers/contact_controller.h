@@ -87,12 +87,14 @@ class ContactController {
         void CalcActuationMatrix(
             const std::vector<Eigen::MatrixXd>& J_all,
             const std::vector<Eigen::MatrixXd>& G_all,
-            const std::vector<Eigen::MatrixXd>& Ke_all
+            const std::vector<Eigen::MatrixXd>& Ke_all,
+            Eigen::MatrixXd* B_Fe_ptr
         );
 
         void CalcMPCProblemMatrices(
             const std::vector<Eigen::MatrixXd>& Kbar_all,
             const std::vector<Eigen::MatrixXd>& J_all,
+            const Eigen::MatrixXd& B_Fe,
             Eigen::MatrixXd* A_mat, Eigen::MatrixXd* B_mat,
             Eigen::MatrixXd* Q_mat, Eigen::MatrixXd* R_mat,
             Eigen::MatrixXd* delR_mat

@@ -226,6 +226,7 @@ ContactController::ContactController(
     Kda_inv_ = Kda_.inverse();
     nc_ = 4;
     nqa_ = plant_->num_actuated_dofs();
+    nvu_ = plant_->num_velocities() - nqa_;
 
     tau_feed_forward_.resize(nqa_);
     fext_feed_forward_.resize(3 * nc_);
@@ -336,18 +337,26 @@ void ContactController::SetPlantPositionsAndVelocities(
 
 void ContactController::CalcStiffAndJacobian(
     std::vector<Eigen::MatrixXd>* Kbar_all_ptr,
-    std::vector<Eigen::MatrixXd>* J_all_ptr
+    std::vector<Eigen::MatrixXd>* J_all_ptr,
+    std::vector<Eigen::MatrixXd>* G_all_ptr,
+    std::vector<Eigen::MatrixXd>* Ke_all_ptr
 ) {
     std::vector<Eigen::MatrixXd>& Kbar_all = *Kbar_all_ptr;
-    std::vector<Eigen::MatrixXd>& J_all = *J_all_ptr;
+    std::vector<Eigen::MatrixXd>& J_all = *J_all_ptr;   // robot Jacobian (actuated)
+    std::vector<Eigen::MatrixXd>& G_all = *G_all_ptr;   // grasping matrix (unactuated)
+    std::vector<Eigen::MatrixXd>& Ke_all = *Ke_all_ptr; // contact stiffness matrix
 
     Kbar_all.clear();
     J_all.clear();
+    G_all.clear();
+    Ke_all.clear();
     contact_measurements_.clear();
 
     for (int i_c=0; i_c<nc_; i_c++) {
         Kbar_all.emplace_back(3, 3);
         J_all.emplace_back(3, nqa_);
+        G_all.emplace_back(6, nvu_);
+        Ke_all.emplace_back(3, 3);
         contact_measurements_.emplace_back(3);
         contact_measurements_.back().setZero();
     }
@@ -448,6 +457,21 @@ void ContactController::CalcStiffAndJacobian(
         );
         Ja = Jqd_vWAc_W.leftCols(nqa_);
 
+        // Grasping Matrix
+        Eigen::MatrixXd& Gu = G_all.at(index_);
+        Eigen::MatrixXd Jqd_vWBc_W;;
+        Jqd_vWBc_W.setZero(6, plant().num_velocities());
+        plant().CalcJacobianSpatialVelocity(
+            *plant_context_,
+            drake::multibody::JacobianWrtVariable::kV,
+            bodyB.body_frame(),
+            X_WB.rotation().inverse() * p_BC_W,
+            plant().world_frame(),
+            plant().world_frame(),
+            &Jqd_vWBc_W
+        );
+        Gu = Jqd_vWBc_W.rightCols(nvu_);
+
         // contact stiffness and damping
         // Kbar_all.emplace_back(3, 3);
         Eigen::MatrixXd& Kbar = Kbar_all.at(index_);
@@ -456,7 +480,8 @@ void ContactController::CalcStiffAndJacobian(
         contact_model_->CalcStiffnessAndDampingMatrices(
             pair.distance, vn, vt, &Ke_, &De_
         );
-        Ke_ = R_WC.matrix() * Ke_ * R_WC.matrix().transpose();        
+        Ke_ = R_WC.matrix() * Ke_ * R_WC.matrix().transpose();
+        Ke_all.at(index_) = Ke_;
         Eigen::MatrixXd Kp_inv_i = Ja * Kpa_.inverse() * Ja.transpose();
         Kbar = (Eigen::MatrixXd::Identity(3, 3) + Ke_ * Kp_inv_i).inverse() * Ke_;
 
@@ -470,6 +495,35 @@ void ContactController::CalcStiffAndJacobian(
         }
 
     }
+}
+
+void ContactController::CalcActuationMatrix(
+    const std::vector<Eigen::MatrixXd>& J_all,
+    const std::vector<Eigen::MatrixXd>& G_all,
+    const std::vector<Eigen::MatrixXd>& Ke_all
+) {
+    Eigen::MatrixXd Ko(nvu_, nvu_);
+    Ko.setZero();
+
+    for (int i_c=0; i_c<n_c; i_c++) {
+        Ko += G_all.at(i_c).transpose() * Ke_all.at(i_c) * G_all.at(i_c);
+    }
+    // TODO(yongpeng) Ko is actually singular, how to deal with this?
+    Ko_inv = Ko.inverse();
+
+    Eigen::MatrixXd G_stack, K_bar, J_stack;
+    G_stack.setZero(3*nc_, nvu_);
+    K_bar.setZero(3*nc_, nqa_);
+    J_stack.setZero(3*nc_, nqa_);
+
+    for (int i_c=0; i_c<nc_; i_c++) {
+        G_stack.block(3*i_c, 0, 3, nvu_) = G_all.at(i_c).topRows(3);
+        K_bar.block(3*i_c, 0, 3, nqa_) = Ke_all.at(i_c) * J_all.at(i_c);
+        J_stack.block(3*i_c, 0, 3, nqa_) = J_all.at(i_c);
+    }
+
+    Eigen::MatrixXd B_Fe = Eigen::MatrixXd::Identity(3*nc_, 3*nc_) + (1./kpa_) * K_bar * J_stack.transpose() + G_stack * Ko_inv * G_stack.transpose();
+    B_Fe = B_Fe.inverse() * K_bar;
 }
 
 void ContactController::CalcMPCProblemMatrices(

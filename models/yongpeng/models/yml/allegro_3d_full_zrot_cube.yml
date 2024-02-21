@@ -1,4 +1,4 @@
-model_directive: package://quasistatic_simulator/yongpeng/models/yml/allegro_3d_4finger.yml
+model_directive: package://quasistatic_simulator/yongpeng/models/yml/allegro_3d_4finger_no_palm.yml
 
 robots:
   -
@@ -8,7 +8,7 @@ robots:
 objects:
   -
     name: sphere
-    file: package://quasistatic_simulator/yongpeng/models/sdf/allegro_3d_sphere_z2.sdf
+    file: package://quasistatic_simulator/yongpeng/models/sdf/allegro_3d_cube_z.sdf
 
 quasistatic_sim_params:
   # gravity: [-6.17, 1.54, -7.72]

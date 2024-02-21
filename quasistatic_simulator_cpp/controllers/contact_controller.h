@@ -79,7 +79,15 @@ class ContactController {
 
         void CalcStiffAndJacobian(
             std::vector<Eigen::MatrixXd>* Kbar_all_ptr,
-            std::vector<Eigen::MatrixXd>* J_all_ptr
+            std::vector<Eigen::MatrixXd>* J_all_ptr,
+            std::vector<Eigen::MatrixXd>* G_all_ptr,
+            std::vector<Eigen::MatrixXd>* Ke_all_ptr
+        );
+
+        void CalcActuationMatrix(
+            const std::vector<Eigen::MatrixXd>& J_all,
+            const std::vector<Eigen::MatrixXd>& G_all,
+            const std::vector<Eigen::MatrixXd>& Ke_all
         );
 
         void CalcMPCProblemMatrices(
@@ -148,4 +156,8 @@ class ContactController {
 
         int nc_{4};
         int nqa_{16};
+        int nvu_{6};
+
+        double kpa_{0.5};
+        double kda_{1e-3};
 };

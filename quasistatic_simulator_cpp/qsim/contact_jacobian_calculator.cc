@@ -91,6 +91,7 @@ void ContactJacobianCalculator<T>::UpdateContactPairInfo(
   for (int i_c = 0; i_c < n_c; i_c++) {
     const auto& sdp = sdps[i_c];
     auto& cpi = contact_pairs_[i_c];  // ContactPairInfo.
+    // cpi.sdist = sdp.distance;
     cpi.nhat_BA_W = sdp.nhat_BA_W;
     cpi.mu = friction_coefficients_.at(sdp.id_A).at(sdp.id_B);
 

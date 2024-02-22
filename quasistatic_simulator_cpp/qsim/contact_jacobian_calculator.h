@@ -9,6 +9,7 @@
 template <typename T>
 struct ContactPairInfo {
   // Contact normal pointing to body A from body B.
+  // double sdist;     // signed distance
   drake::Vector3<T> nhat_BA_W;
 
   // Tangents which are perpendicular to nhat_BA_W. Each column of the matrix

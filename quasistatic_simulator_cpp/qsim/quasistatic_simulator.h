@@ -172,6 +172,7 @@ class QuasistaticSimulator {
   Eigen::MatrixXd get_f_Bc() const { return spatial_fB_; }
   Eigen::MatrixXd get_points_Ac() const { return contact_points_A_; }
   Eigen::MatrixXd get_points_Bc() const { return contact_points_B_; }
+  Eigen::VectorXd get_contact_sdists() const { return contact_sdists_; }
   std::vector<std::string> get_geom_names_Ac() const { return contact_geom_names_A_; }
   std::vector<std::string> get_geom_names_Bc() const { return contact_geom_names_B_; }
 
@@ -565,6 +566,7 @@ class QuasistaticSimulator {
   Eigen::MatrixXd spatial_fB_;          // through the ith contact pair, expressed in world frame
   Eigen::MatrixXd contact_points_A_;    // contact points on body A/B, corresponding to the ith contact pair
   Eigen::MatrixXd contact_points_B_;    // expressed in A/B's body frame
+  Eigen::VectorXd contact_sdists_;      // signed distance
   std::vector<std::string> contact_geom_names_A_;     // the name of contact geometry
   std::vector<std::string> contact_geom_names_B_;     // as they always change
 

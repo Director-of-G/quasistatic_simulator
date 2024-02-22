@@ -195,6 +195,7 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def("get_geom_names_Bc", &Class::get_geom_names_Bc)
         .def("get_points_Ac", &Class::get_points_Ac)
         .def("get_points_Bc", &Class::get_points_Bc)
+        .def("get_sdists", &Class::get_contact_sdists)
         .def("get_Nhat", &Class::get_Nhat)
         .def("get_Jn_list", &Class::get_Jn_list)
         .def("get_phi_list", &Class::get_phi_list)

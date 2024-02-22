@@ -419,6 +419,7 @@ void QuasistaticSimulator::CalcContactResultsLogIcecream(
   generalized_fB_.resize(n_c, n_v);
   spatial_fA_.resize(n_c, 6);
   spatial_fB_.resize(n_c, 6);
+  contact_sdists_.resize(n_c);
   contact_points_A_.resize(n_c, 3);
   contact_points_B_.resize(n_c, 3);
 
@@ -426,6 +427,7 @@ void QuasistaticSimulator::CalcContactResultsLogIcecream(
   generalized_fB_.setZero();
   spatial_fA_.setZero();
   spatial_fB_.setZero();
+  contact_sdists_.setZero();
   contact_points_A_.setZero();
   contact_points_B_.setZero();
 
@@ -447,6 +449,7 @@ void QuasistaticSimulator::CalcContactResultsLogIcecream(
     spatial_fB_.row(i_c).head(3) = -f_Ac_W;
     contact_points_A_.row(i_c) = cpi.p_ACa;
     contact_points_B_.row(i_c) = cpi.p_BCb;
+    // contact_sdists_(i_c) = cpi.sdist;
 
     contact_geom_names_A_.push_back(cpi.geom_name_A);
     contact_geom_names_B_.push_back(cpi.geom_name_B);
@@ -2113,6 +2116,7 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
         CalcContactResultsLogIcecream(
           cjc_->get_contact_pair_info_list(), lambda_star_list, n_v, params.h
         );
+        contact_sdists_ = phi;
       }
       else {
         generalized_fA_.resize(0, n_v);
@@ -2121,6 +2125,7 @@ void QuasistaticSimulator::Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
         spatial_fB_.resize(0, 6);
         contact_points_A_.resize(0, 3);
         contact_points_B_.resize(0, 3);
+        contact_sdists_.resize(0);
         contact_geom_names_A_.clear();
         contact_geom_names_B_.clear();
       }

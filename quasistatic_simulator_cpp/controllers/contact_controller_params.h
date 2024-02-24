@@ -21,6 +21,7 @@ struct ContactControllerParameters {
 
   bool calc_torque_feedforward{false};
   bool is_3d_floating{false};
+  bool is_valve{false};
   bool enable_multi_contact{false};
 
   Eigen::Vector3d hand_base_trans, hand_base_rot;

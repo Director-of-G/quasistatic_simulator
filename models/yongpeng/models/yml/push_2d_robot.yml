@@ -1,4 +1,0 @@
-directives:
-- add_model:
-    name: hand
-    file: package://quasistatic_simulator/yongpeng/models/sdf/dex_2d_robot.sdf

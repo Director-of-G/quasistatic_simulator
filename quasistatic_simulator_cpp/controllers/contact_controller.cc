@@ -91,6 +91,40 @@ void AddRotationOnlySphereToPlant(MultibodyPlant<double>* plant_ptr) {
     );
 }
 
+void AddRotationOnlyValveToPlant(MultibodyPlant<double>* plant_ptr) {
+    const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
+
+    MultibodyPlant<double>& plant = *plant_ptr;
+    
+    // Add a free-floating ball
+    ModelInstanceIndex valve_idx = plant.AddModelInstance("valve");
+
+    // Not matters, since we only use the kinematics at this time
+    const double mass = 0.05;
+    Eigen::Vector3d size(0.04, 0.20, 0.04);
+
+    const SpatialInertia<double> I(mass, Vector3d::Zero(),
+                                   UnitInertia<double>::SolidBox(size[0], size[1], size[2]));
+    const RigidBody<double>& valve = plant.AddRigidBody("valve", valve_idx, I);
+
+    plant.RegisterVisualGeometry(valve, RigidTransformd::Identity(),
+                                  Box(size[0], size[1], size[2]), "valve_visual", blue);
+    plant.RegisterCollisionGeometry(valve, RigidTransformd::Identity(),
+                                     Box(size[0], size[1], size[2]), "valve_collision",
+                                     CoulombFriction<double>());
+
+    // Add rotation joint
+    auto valve_mount_transform = drake::math::RigidTransform<double>(drake::Vector3<double>(-0.08, 0.0, 0.11));
+    const drake::multibody::RevoluteJoint<double>& valve_root_joint = plant.AddJoint<drake::multibody::RevoluteJoint>(
+        "valve_root_joint",
+        plant.world_body(),
+        valve_mount_transform,
+        valve,
+        {},
+        Eigen::Vector3d::UnitZ()
+    );
+}
+
 void AddEnvironmentsToPlant(MultibodyPlant<double>* plant_ptr) {
     const drake::Vector4<double> brown(0.871, 0.722, 0.529, 0.8);
 
@@ -198,11 +232,15 @@ ContactController::ContactController(
     plant.mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 0));
 
     // Add manipuland and environment
-    if (controller_params.is_3d_floating) {
-        AddFreeFloatingSphereToPlant(&plant);
-        AddEnvironmentsToPlant(&plant);
+    if (controller_params.is_valve) {
+        AddRotationOnlyValveToPlant(&plant);
     } else {
-        AddRotationOnlySphereToPlant(&plant);
+        if (controller_params.is_3d_floating) {
+            AddFreeFloatingSphereToPlant(&plant);
+            AddEnvironmentsToPlant(&plant);
+        } else {
+            AddRotationOnlySphereToPlant(&plant);
+        }
     }
 
     // Finalize and build

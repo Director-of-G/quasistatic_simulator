@@ -25,6 +25,7 @@
 #include <drake/multibody/plant/multibody_plant_config_functions.h>
 #include <drake/multibody/tree/fixed_offset_frame.h>
 #include <drake/multibody/tree/revolute_joint.h>
+#include <drake/multibody/tree/ball_rpy_joint.h>
 #include <drake/multibody/tree/weld_joint.h>
 
 #include "drake/solvers/decision_variable.h"

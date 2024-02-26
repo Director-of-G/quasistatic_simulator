@@ -6,6 +6,15 @@
 #include <unordered_set>
 
 
+// This class defines possible object geometry
+enum class ObjectGeom {
+  kZRotSphere,
+  kFreeRotSphere,
+  kFreeMoveSphere,
+  kCapsuleValve
+};
+
+
 struct ContactControllerParameters {
   double weight_q{1e-3};
   double weight_dq{0.5};
@@ -20,8 +29,9 @@ struct ContactControllerParameters {
   double robot_kd{1e-3};
 
   bool calc_torque_feedforward{false};
-  bool is_3d_floating{false};
-  bool is_valve{false};
+  // bool is_3d_floating{false};
+  // bool is_valve{false};
+  ObjectGeom object_geom{ObjectGeom::kZRotSphere};
   bool enable_multi_contact{false};
 
   Eigen::Vector3d hand_base_trans, hand_base_rot;

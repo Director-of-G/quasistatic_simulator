@@ -9,6 +9,11 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(contact_ctrl_cpp, m) {
+  py::enum_<ObjectGeom>(m, "ObjectGeom")
+      .value("kZRotSphere", ObjectGeom::kZRotSphere)
+      .value("kFreeRotSphere", ObjectGeom::kFreeRotSphere)
+      .value("kFreeMoveSphere", ObjectGeom::kFreeMoveSphere)
+      .value("kCapsuleValve", ObjectGeom::kCapsuleValve);
 
   {
     using Class = ContactControllerParameters;
@@ -25,8 +30,9 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def_readwrite("robot_kp", &Class::robot_kp)
         .def_readwrite("robot_kd", &Class::robot_kd)
         .def_readwrite("calc_torque_feedforward", &Class::calc_torque_feedforward)
-        .def_readwrite("is_valve", &Class::is_valve)
-        .def_readwrite("is_3d_floating", &Class::is_3d_floating)
+        // .def_readwrite("is_valve", &Class::is_valve)
+        // .def_readwrite("is_3d_floating", &Class::is_3d_floating)
+        .def_readwrite("object_geom", &Class::object_geom)
         .def_readwrite("enable_multi_contact", &Class::enable_multi_contact)
         .def_readwrite("hand_base_trans", &Class::hand_base_trans)
         .def_readwrite("hand_base_rot", &Class::hand_base_rot)

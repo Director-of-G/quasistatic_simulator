@@ -91,6 +91,39 @@ void AddRotationOnlySphereToPlant(MultibodyPlant<double>* plant_ptr) {
     );
 }
 
+void AddFreeRotationSphereToPlant(MultibodyPlant<double>* plant_ptr) {
+    const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
+
+    MultibodyPlant<double>& plant = *plant_ptr;
+    
+    // Add a free-floating ball
+    ModelInstanceIndex ball_idx = plant.AddModelInstance("ball");
+
+    // Not matters, since we only use the kinematics at this time
+    const double mass = 0.05;
+    const double radius = 0.06;
+
+    const SpatialInertia<double> I(mass, Vector3d::Zero(),
+                                   UnitInertia<double>::SolidSphere(radius));
+    const RigidBody<double>& ball = plant.AddRigidBody("ball", ball_idx, I);
+
+    plant.RegisterVisualGeometry(ball, RigidTransformd::Identity(),
+                                  Sphere(radius), "ball_visual", blue);
+    plant.RegisterCollisionGeometry(ball, RigidTransformd::Identity(),
+                                     Sphere(radius), "ball_collision",
+                                     CoulombFriction<double>());
+
+    // Add rotation joint
+    auto sphere_mount_transform = drake::math::RigidTransform<double>(drake::Vector3<double>(-0.06, 0.0, 0.072));
+    const drake::multibody::BallRpyJoint<double>& sphere_root_joint = plant.AddJoint<drake::multibody::BallRpyJoint>(
+        "sphere_root_joint",
+        plant.world_body(),
+        sphere_mount_transform,
+        ball,
+        {}
+    );
+}
+
 void AddRotationOnlyValveToPlant(MultibodyPlant<double>* plant_ptr) {
     const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
 
@@ -232,21 +265,37 @@ ContactController::ContactController(
     plant.mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 0));
 
     // Add manipuland and environment
-    if (controller_params.is_valve) {
-        AddRotationOnlyValveToPlant(&plant);
-    } else {
-        if (controller_params.is_3d_floating) {
-            AddFreeFloatingSphereToPlant(&plant);
-            AddEnvironmentsToPlant(&plant);
-        } else {
-            AddRotationOnlySphereToPlant(&plant);
-        }
+    switch (controller_params.object_geom)
+    {
+        case ObjectGeom::kZRotSphere:
+            {
+                AddRotationOnlySphereToPlant(&plant);
+            }
+            break;
+        case ObjectGeom::kFreeRotSphere:
+            {
+                AddFreeRotationSphereToPlant(&plant);
+            }
+            break;
+        case ObjectGeom::kFreeMoveSphere:
+            {
+                AddFreeFloatingSphereToPlant(&plant);
+                AddEnvironmentsToPlant(&plant);
+            }
+            break;
+        case ObjectGeom::kCapsuleValve:
+            {
+                AddRotationOnlyValveToPlant(&plant);
+            }
+            break;
+        default:
+            break;
     }
 
     // Finalize and build
     plant.Finalize();
 
-    if (controller_params.is_3d_floating) {
+    if (controller_params.object_geom == ObjectGeom::kFreeMoveSphere) {
         ExcludeRobotCollisionWithEnvs(&plant, &scene_graph);
     }
 

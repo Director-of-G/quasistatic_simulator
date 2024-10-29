@@ -243,6 +243,21 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiQp(
   }
 }
 
+/**
+ * @brief Computes the contact Jacobians and the phi values for the SOC (Second-Order Cone Programming) problem.
+ *
+ * This function calculates the contact Jacobians and the phi values based on Signed Distance Pairs (SDPs).
+ * It is used in multibody dynamics for contact force computations and optimization problems.
+ *
+ * @tparam T The template parameter specifying the scalar type (e.g., `double`, `float`, etc.).
+ *
+ * @param[in] context_plant Pointer to the Drake system context, providing the current system state.
+ * @param[in] sdps A vector of Signed Distance Pairs representing the distance information between contact geometries.
+ * @param[out] phi_ptr Pointer to a `VectorX<T>` where the scalar contact distance values (phi) will be stored.
+ * @param[out] Jn_ptr (NOT divided by mu) Pointer to a `MatrixX<T>` where the normal Jacobian matrix will be stored.
+ * @param[out] J_list_ptr (Jn IS divided by mu) Pointer to a vector of `Matrix3X<T>` where the tangential Jacobian matrices for each contact point will be stored.
+ * @param[out] Nhat_list_ptr Pointer to a `MatrixX<T>` where the unit normal vectors will be stored.
+ */
 template <class T>
 void ContactJacobianCalculator<T>::CalcJacobianAndPhiSocp(
     const drake::systems::Context<T>* context_plant,

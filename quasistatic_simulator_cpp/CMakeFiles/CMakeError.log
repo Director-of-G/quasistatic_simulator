@@ -1,0 +1,60 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_25ccf/fast && /usr/bin/make  -f CMakeFiles/cmTC_25ccf.dir/build.make CMakeFiles/cmTC_25ccf.dir/build
+make[1]: 进入目录“/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_25ccf.dir/src.c.o
+/usr/bin/cc   -DCMAKE_HAVE_LIBC_PTHREAD -o CMakeFiles/cmTC_25ccf.dir/src.c.o -c /home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_25ccf
+/usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_25ccf.dir/link.txt --verbose=1
+/usr/bin/cc  -DCMAKE_HAVE_LIBC_PTHREAD -rdynamic CMakeFiles/cmTC_25ccf.dir/src.c.o -o cmTC_25ccf 
+/usr/bin/ld: CMakeFiles/cmTC_25ccf.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x5e): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.c:(.text+0x6f): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_25ccf.dir/build.make:106：cmTC_25ccf] 错误 1
+make[1]: 离开目录“/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp”
+make: *** [Makefile:140：cmTC_25ccf/fast] 错误 2
+
+
+Source file was:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_95171/fast && /usr/bin/make  -f CMakeFiles/cmTC_95171.dir/build.make CMakeFiles/cmTC_95171.dir/build
+make[1]: 进入目录“/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_95171.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_95171.dir/CheckFunctionExists.c.o -c /usr/local/lib/python3.8/dist-packages/cmake/data/share/cmake-3.18/Modules/CheckFunctionExists.c
+Linking C executable cmTC_95171
+/usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_95171.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create -rdynamic CMakeFiles/cmTC_95171.dir/CheckFunctionExists.c.o -o cmTC_95171  -lpthreads 
+/usr/bin/ld: 找不到 -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_95171.dir/build.make:106：cmTC_95171] 错误 1
+make[1]: 离开目录“/home/yongpeng/research/projects/contact_rich/CQDC_model/quasistatic_simulator/quasistatic_simulator_cpp/CMakeFiles/CMakeTmp”
+make: *** [Makefile:140：cmTC_95171/fast] 错误 2
+
+
+

@@ -21,6 +21,8 @@ using drake::VectorX;
 using drake::math::ExtractValue;
 using drake::math::InitializeAutoDiff;
 using drake::multibody::ModelInstanceIndex;
+using drake::multibody::Body;
+using drake::multibody::JointIndex;
 using Eigen::MatrixXd;
 using Eigen::Vector3d;
 using Eigen::VectorXd;
@@ -30,8 +32,8 @@ using std::string;
 using std::vector;
 
 // typedef Matrix<double, Dynamic, Dynamic, RowMajor> RowMatrixXd;
-using namespace mosek::fusion;
-using namespace monty;
+// using namespace mosek::fusion;
+// using namespace monty;
 
 Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", " << ", ";");
 
@@ -643,7 +645,7 @@ void QuasistaticSimulator::CalcPyramidMatrices(
     const QuasistaticSimParameters& params, Eigen::MatrixXd* Q,
     Eigen::VectorXd* tau_h_ptr, Eigen::MatrixXd* Jn_ptr, Eigen::MatrixXd* J_ptr,
     Eigen::VectorXd* phi_ptr, Eigen::VectorXd* phi_constraints_ptr) const {
-  const auto sdps = CalcCollisionPairs(params.contact_detection_tolerance);
+  const auto sdps = CalcCollisionPairs(params.contact_detection_tolerance, false);
   std::vector<MatrixXd> J_list;
   const auto n_d = params.nd_per_contact;
   cjc_->CalcJacobianAndPhiQp(context_plant_, sdps, n_d, phi_ptr, Jn_ptr,
@@ -673,7 +675,7 @@ void QuasistaticSimulator::CalcIcecreamMatrices(
     Eigen::MatrixXd* Jn_ptr,
     std::vector<Eigen::Matrix3Xd>* J_list,
     Eigen::VectorXd* phi) const {
-  const auto sdps = CalcCollisionPairs(params.contact_detection_tolerance);
+  const auto sdps = CalcCollisionPairs(params.contact_detection_tolerance, false);
   cjc_->CalcJacobianAndPhiSocp(context_plant_, sdps, phi, Jn_ptr, J_list, &Nhat_);
   CalcQAndTauH(q_dict, q_a_cmd_dict, tau_ext_dict, params.h, Q, tau_h,
                params.unactuated_mass_scale);
@@ -1193,11 +1195,22 @@ void QuasistaticSimulator::BackwardLogIcecream(
     duration_millsecond = std::chrono::duration<double, std::milli>(nowTime - backwardStartTime).count();
     std::cout << "> it took " << duration_millsecond << " ms to compute the Dq_nextDqa_cmd from hessian" << std::endl;
 #endif
+    if (params.gradient_dfdx_mode == DfDxMode::kAutoDiff) {
+      Dq_nextDq_ = CalcDfDxLogIcecream(v_star, q_dict, q_next_dict, params.h,
+                                        params.log_barrier_weight, H_llt);
+    } else if (params.gradient_dfdx_mode == DfDxMode::kAnalyticWithFiniteDiff) {
+      Dq_nextDq_ = CalcDfDxLogIcecreamAnalytic(v_star, q_dict, q_next_dict, params, H_llt);
+    } else {
+      throw std::logic_error("Invalid gradient_dfdx_mode.");
+    }
 
-    Dq_nextDq_ = CalcDfDxLogIcecream(v_star, q_dict, q_next_dict, params.h,
-                                     params.log_barrier_weight, H_llt);
-    // Dq_nextDq_ = CalcDfDxLogIcecream(v_star, q_dict, q_next_dict, params.h,
-    //                                  params.log_barrier_weight, H.llt());
+    /*
+      // TODO(yongpeng): debug the following
+      Test calc DfDx for arbitrary shape here
+    */
+    // Eigen::MatrixXd Dq_nextDq_a_ = CalcDfDxLogIcecreamAnalytic(v_star, q_dict, q_next_dict, params, H_llt);
+    // const auto cosine = (Dq_nextDq_.reshaped().transpose() * Dq_nextDq_a_.reshaped()) / (Dq_nextDq_.norm() * Dq_nextDq_a_.norm());
+    // std::cout << "Dq_nextDq: ||AutoDiff||=" << Dq_nextDq_.norm() << ", ||Analytic||=" << Dq_nextDq_a_.norm() << ", cosine=" << cosine << std::endl;
 
 #ifdef VERBOSE_TIMECOST
     nowTime = std::chrono::steady_clock::now();
@@ -1876,13 +1889,13 @@ QuasistaticSimulator::CalcSignedDistancePairsFromCollisionPairs(
   std::vector<drake::geometry::SignedDistancePair<drake::AutoDiffXd>> sdps_ad;
   std::vector<int> all_indices;
   if (active_contact_indices == nullptr) {
-    all_indices.resize(collision_pairs_.size());
+    all_indices.resize(ordered_collision_pairs_.size());
     std::iota(all_indices.begin(), all_indices.end(), 0);
     active_contact_indices = &all_indices;
   }
 
   for (const auto i : *active_contact_indices) {
-    const auto& collision_pair = collision_pairs_[i];
+    const auto& collision_pair = ordered_collision_pairs_[i];
     sdps_ad.push_back(query_object_ad_->ComputeSignedDistancePairClosestPoints(
         collision_pair.first, collision_pair.second));
   }
@@ -1891,17 +1904,36 @@ QuasistaticSimulator::CalcSignedDistancePairsFromCollisionPairs(
 
 std::vector<drake::geometry::SignedDistancePair<double>>
 QuasistaticSimulator::CalcCollisionPairs(
-    double contact_detection_tolerance) const {
+  double contact_detection_tolerance,
+  bool in_order
+) const {
   auto sdps = query_object_->ComputeSignedDistancePairwiseClosestPoints(
-      contact_detection_tolerance);
-  collision_pairs_.clear();
+      contact_detection_tolerance);\
+  GetFingerGeomidsFromSdps(sdps, &collision_pairs_);
+  // collision_pairs_.clear();
 
-  // Save collision pairs, which may later be used in gradient computation by
-  // the AutoDiff MBP.
-  for (const auto& sdp : sdps) {
-    collision_pairs_.emplace_back(sdp.id_A, sdp.id_B);
+  // // Save collision pairs, which may later be used in gradient computation by
+  // // the AutoDiff MBP.
+  // for (const auto& sdp : sdps) {
+  //   collision_pairs_.emplace_back(sdp.id_A, sdp.id_B);
+  // }
+
+  if (in_order) {
+    std::vector<drake::geometry::SignedDistancePair<double>> sdps_sorted;
+    std::vector<CollisionPair> found_collision_pairs;
+    GetFingerGeomidsFromSdps(sdps, &found_collision_pairs);
+    for (const auto& pair : ordered_collision_pairs_) {
+      auto it = std::find(found_collision_pairs.begin(), found_collision_pairs.end(), pair);
+      if (it != found_collision_pairs.end()) {
+        int index = std::distance(found_collision_pairs.begin(), it);
+        sdps_sorted.push_back(sdps[index]);
+      }
+    }
+    return sdps_sorted;
+  } else {
+    GetFingerGeomidsFromSdps(sdps, &ordered_collision_pairs_);
+    return sdps;
   }
-  return sdps;
 }
 
 ModelInstanceIndexToMatrixMap QuasistaticSimulator::CalcScaledMassMatrix(
@@ -2279,7 +2311,7 @@ void QuasistaticSimulator::UpdateContactInformation(
   const auto q_dict = this->GetMbpPositions();
   const auto fm = params.forward_mode;
   
-  const auto sdps = this->CalcCollisionPairs(params.contact_detection_tolerance);
+  const auto sdps = this->CalcCollisionPairs(params.contact_detection_tolerance, true);
 
   VectorXd phi;
   MatrixXd Jn, Nhat;
@@ -2380,4 +2412,340 @@ void QuasistaticSimulator::print_solver_info_for_default_params() const {
   cout << "QP solver: " << qp_solver_name << endl;
   cout << "Cone solver: " << cone_solver_name << endl;
   cout << "===================================" << endl;
+}
+
+/*
+CalcDfDxLogPyramid computes DfDx using Drake's AutoDiffXd.
+Here we derive the derivatives analytically.
+*/
+
+Eigen::MatrixXd QuasistaticSimulator::CalcDfDxLogIcecreamAnalytic(
+    const Eigen::Ref<const Eigen::VectorXd>& v_star,
+    const ModelInstanceIndexToVecMap& q_dict,
+    const ModelInstanceIndexToVecMap& q_next_dict,
+    const QuasistaticSimParameters& params,
+    const Eigen::LLT<Eigen::MatrixXd>& H_llt){
+
+  std::vector<Eigen::MatrixXd> Dv_next_DJ, Dv_next_DPhi;
+
+  const auto kappa = params.log_barrier_weight;
+  const auto h = params.h;
+  const auto n_d = params.nd_per_contact;
+
+  // Dδq*/Db * Db/Dq
+  MatrixXd DyDq = MatrixXd::Zero(n_v_, n_q_);
+  CalcDv_nextDbDq(MatrixXd::Identity(n_v_, n_v_) * kappa, h, &DyDq);
+  // H_llt.solveInPlace(DyDq);
+
+  this->UpdateMbpPositions(q_dict);
+
+  const auto sdps = CalcCollisionPairs(params.contact_detection_tolerance, true);
+  // GetFingerNamesFromSdps(sdps, &ordered_fingers_in_contact_);
+  
+  const auto n_c = sdps.size();
+  std::vector<Eigen::Matrix3Xd> J_list;
+  MatrixXd Jn, Nhat;
+  VectorXd phi;
+  cjc_->CalcJacobianAndPhiSocp(context_plant_, sdps, &phi, &Jn, &J_list, &Nhat);
+
+  static const Eigen::Matrix3d W{{1, 0, 0}, {0, -1, 0}, {0, 0, -1}};
+  for (size_t i_c = 0; i_c < n_c; i_c++) {
+    std::vector<std::string> names;
+    GetBodyNameFromSdp(sdps[i_c], &names);
+    // std::cout << "finger " << i_c << " when DfDx: " << names[1] << std::endl;
+
+    Eigen::MatrixXd J_i = J_list[i_c];
+    VectorXd Jn_i = Jn.row(i_c);
+    VectorXd Jt1_i = J_i.row(1);
+    VectorXd Jt2_i = J_i.row(2);
+    double phi_i = phi[i_c];
+
+    // calc canonical values
+    double mu = cjc_->get_friction_coefficient(i_c);
+    Jn_i = Jn_i / mu;
+    phi_i = phi_i / h / mu;
+
+    // calc auxiliary values
+    Vector3d w = J_i * v_star;
+    w[0] += phi_i;
+    const double d = w.transpose() * W * w;
+    VectorXd m = (phi_i + Jn_i.transpose() * v_star) * Jn_i - \
+                  (Jt1_i.transpose() *  v_star) * Jt1_i - \
+                  (Jt2_i.transpose() *  v_star) * Jt2_i;
+
+    // calculate Dv_next_DJ
+    Eigen::MatrixXd Dg_DJ(n_v_, 3*n_v_);
+    Dg_DJ.block(0, 0, n_v_, n_v_) = (2 / d / d) * (-d * (Jn_i * v_star.transpose() + w[0] * Eigen::MatrixXd::Identity(n_v_, n_v_)) \
+                                                  + 2 * w[0] * m * v_star.transpose());
+    Dg_DJ.block(0, n_v_, n_v_, n_v_) = (2 / d / d) * (d*(Jt1_i * v_star.transpose() + w[1] * Eigen::MatrixXd::Identity(n_v_, n_v_)) \
+                                                      - 2 * w[1] * m * v_star.transpose());
+    Dg_DJ.block(0, 2 * n_v_, n_v_, n_v_) = (2 / d / d) * (d*(Jt2_i * v_star.transpose() + w[2] * Eigen::MatrixXd::Identity(n_v_, n_v_)) \
+                                                          - 2 * w[2] * m * v_star.transpose());
+
+    // Dv_next_DJ.emplace_back(-H_llt.solve(Dg_DJ));
+    Dv_next_DJ.emplace_back(Dg_DJ);
+
+    // TODO(yongpeng): debug cosine similarity between DKKT/DJ and DKKT/DPhi
+    // std::cout << "Comparing the " << i_c << "th contact!" << std::endl;
+    // AutoDiffXd d_ad;
+    // Vector3<AutoDiffXd> w_ad;
+    // VectorX<AutoDiffXd> y_ad;
+    // const auto J_i_ad = InitializeAutoDiff(J_i.reshaped<Eigen::RowMajor>());
+    // Matrix3X<AutoDiffXd> J_i_ad_mat = J_i_ad.reshaped<Eigen::RowMajor>(3, n_v_);
+    // w_ad = J_i_ad_mat * v_star;
+    // w_ad[0] += phi_i;
+    // d_ad = -w_ad[0] * w_ad[0] + w_ad[1] * w_ad[1] + w_ad[2] * w_ad[2];
+    // y_ad = (2 / d_ad) * J_i_ad_mat.transpose() * Vector3<AutoDiffXd>(w_ad[0], -w_ad[1], -w_ad[2]);
+    // Eigen::MatrixXd Dg_DJ_ad = drake::math::ExtractGradient(y_ad);
+    // std::cout << "Dg_DJ: ||AutoDiff||=" << Dg_DJ_ad.norm() << ", ||Analytic||=" << Dg_DJ.norm() << std::endl;
+    // std::cout << "cosine similarity: " << (Dg_DJ_ad.reshaped().transpose() * Dg_DJ.reshaped()) / (Dg_DJ_ad.norm() * Dg_DJ.norm()) << std::endl;
+
+    // calculate Dv_next_DPhi
+    Eigen::VectorXd Dg_DPhi = (2 / d / d) * (-d * Jn_i + 2 * w[0] * m);
+    // Dv_next_DPhi.emplace_back(-H_llt.solve(Dg_DPhi));
+    Dv_next_DPhi.emplace_back(Dg_DPhi);
+
+    // TODO(yongpeng): remove these after debug
+    // Eigen::VectorXd phi_i_vec(1);
+    // phi_i_vec(0) = phi_i;
+    // const auto phi_i_ad = InitializeAutoDiff(phi_i_vec);
+    // w_ad = J_i * v_star;
+    // w_ad[0] += phi_i_ad(0, 0);
+    // d_ad = -w_ad[0] * w_ad[0] + w_ad[1] * w_ad[1] + w_ad[2] * w_ad[2];
+    // y_ad = (2 / d_ad) * J_i.transpose() * Vector3<AutoDiffXd>(w_ad[0], -w_ad[1], -w_ad[2]);
+    // Eigen::VectorXd Dg_DPhi_ad = drake::math::ExtractGradient(y_ad);
+    // std::cout << "Dg_DPhi: ||AutoDiff||=" << Dg_DPhi_ad.norm() << ", ||Analytic||=" << Dg_DPhi.norm() << std::endl;
+    // std::cout << "cosine similarity: " << (Dg_DPhi_ad.transpose() * Dg_DPhi) / (Dg_DPhi_ad.norm() * Dg_DPhi.norm()) << std::endl;
+  }
+
+  // calc dJ/dq
+  // std::cout << "calc dJ/dq ..." << std::endl;
+  std::vector<Eigen::MatrixXd> H_list;
+  Eigen::VectorXd q = GetQVecFromDict(q_dict);
+  CalcContactHessianFiniteDiff(params, q, &H_list);
+
+  // calc Dv_nextDq
+  // std::cout << "calc Dv_nextDq ..." << std::endl;
+  Eigen::MatrixXd DyDq_part2 = MatrixXd::Zero(n_v_, n_q_);
+  for (size_t i_c = 0; i_c < n_c; i_c++) {
+    VectorXd Jn_i = Jn.row(i_c);
+    Jn_i = Jn_i / h / cjc_->get_friction_coefficient(i_c);
+    DyDq_part2 += Dv_next_DJ[i_c] * H_list[i_c] + Dv_next_DPhi[i_c] * Jn_i.transpose();
+  }
+  // H_llt.solveInPlace(DyDq_part2);
+  DyDq += DyDq_part2;
+  DyDq *= -1;
+  H_llt.solveInPlace(DyDq);
+
+  return CalcDq_nextDqFromDv_nextDq(DyDq, q_next_dict, v_star, h);
+}
+
+/**************************************************************/
+
+/*
+  Get contact Jacobian in the order of ordered_fingers_in_contact_.
+  This is to ensure dJ/dq and dv_next/dJ are multiplied in the correct order.
+  Jn in the returned J_list_ptr is divided by mu.
+*/
+void QuasistaticSimulator::GetOrderedContactJacobian(
+  const Eigen::VectorXd& q,
+  double tolerance,
+  std::vector<Eigen::Matrix3Xd>* J_list_ptr,
+  bool in_order
+) {
+  // unused placeholders
+  MatrixXd Jn, Nhat;
+  VectorXd phi;
+  this->UpdateMbpPositions(q);
+  const auto sdps = CalcCollisionPairs(tolerance, in_order);
+
+  // // sort sdps
+  // std::vector<drake::geometry::SignedDistancePair<double>> sdps_sorted;
+  // std::vector<std::string> finger_names_from_sdps;
+  // GetFingerNamesFromSdps(sdps, &finger_names_from_sdps);
+  // for (const auto& name : ordered_fingers_in_contact_) {
+  //   auto it = std::find(finger_names_from_sdps.begin(), finger_names_from_sdps.end(), name);
+  //   if (it != finger_names_from_sdps.end()) {
+  //     int index = std::distance(finger_names_from_sdps.begin(), it);
+  //     sdps_sorted.push_back(sdps[index]);
+  //   }
+  // }
+
+  cjc_->CalcJacobianAndPhiSocp(context_plant_, sdps, &phi, &Jn, J_list_ptr, &Nhat);
+}
+
+void QuasistaticSimulator::GetBodyNameFromSdp(
+  const drake::geometry::SignedDistancePair<double>& sdp,
+  std::vector<std::string>* body_names_ptr
+) const {
+  body_names_ptr->clear();
+  const auto& insp = sg_->model_inspector();
+  const Body<double>* body_A = plant_->GetBodyFromFrameId(insp.GetFrameId(sdp.id_A));
+  const Body<double>* body_B = plant_->GetBodyFromFrameId(insp.GetFrameId(sdp.id_B));
+  body_names_ptr->push_back(body_A->name());
+  body_names_ptr->push_back(body_B->name());
+}
+
+void QuasistaticSimulator::GetFingerNamesFromSdps(
+  const std::vector<drake::geometry::SignedDistancePair<double>>& sdps,
+  std::vector<std::string>* finger_names_ptr
+) const {
+  finger_names_ptr->clear();
+  for (const auto& sdp : sdps) {
+    std::vector<std::string> body_names;
+    GetBodyNameFromSdp(sdp, &body_names);
+    finger_names_ptr->push_back(body_names[1]);   // assume fingertip is the second geom
+  }
+}
+
+void QuasistaticSimulator::GetFingerGeomidsFromSdps(
+    const std::vector<drake::geometry::SignedDistancePair<double>>& sdps,
+    std::vector<CollisionPair>* collision_pairs_ptr
+  ) const {
+    collision_pairs_ptr->clear();
+
+    // Save collision pairs, which may later be used in gradient computation by
+    // the AutoDiff MBP.
+    for (const auto& sdp : sdps) {
+      collision_pairs_ptr->emplace_back(sdp.id_A, sdp.id_B);
+    }
+  }
+
+void QuasistaticSimulator::CalcContactHessianFiniteDiff(
+  QuasistaticSimParameters sim_params,
+  const Eigen::VectorXd& q,
+  std::vector<Eigen::MatrixXd>* H_list_ptr
+) {
+  // PrintAllJointWithNames();
+
+  int n_v = 17;
+  double dq = 1e-5; // perturbation in each dim
+  H_list_ptr->clear();
+
+  this->UpdateMbpPositions(q);
+  const auto sdps = CalcCollisionPairs(sim_params.contact_detection_tolerance, true);
+  // PrintAllContactWithNames(sdps);
+
+  std::vector<Eigen::Matrix3Xd> J_list_unperturbed;
+  GetOrderedContactJacobian(q, sim_params.contact_detection_tolerance, &J_list_unperturbed, true);
+
+  // for (const auto&sdp : sdps){
+  for (size_t i = 0; i < sdps.size(); i++) {
+    const auto& sdp = sdps[i];
+    const auto& J = J_list_unperturbed[i];
+
+    std::vector<std::string> body_names;
+    GetBodyNameFromSdp(sdp, &body_names);
+
+    // include indices of the object and the corresponding finger
+    // TODO(yongpeng): do not hardcode
+    const std::string& finger_name = body_names[1];
+    // std::cout << "finger " << i << " when diff(H): " << finger_name << std::endl;
+    std::vector<long> q_indices;
+    if (finger_name == "fingertip") {
+      // q_indices = {1, 2, 3, 4};
+      q_indices = {5, 6, 7, 8};
+    }
+    else if (finger_name == "fingertip_2") {
+      // q_indices = {9, 10, 11, 12};
+      q_indices = {13, 14, 15, 16};
+    }
+    else if (finger_name == "fingertip_3") {
+      // q_indices = {13, 14, 15, 16};
+      q_indices = {9, 10, 11, 12};
+    }
+    else if (finger_name == "thumb_fingertip") {
+      // q_indices = {5, 6, 7, 8};
+      q_indices = {1, 2, 3, 4};
+    }
+    else {
+      std::cout << "Unknown finger name: " << finger_name << std::endl;
+      continue;
+    }
+    
+    Eigen::MatrixXd H(3*n_v, n_v);
+    H.setZero();
+    // for (const auto j : q_indices) {
+    for (size_t j = 0; j <= 16; j++) {
+      // perturb each finger joint and object joint
+      auto q_perturbed = q;
+      q_perturbed[j] += dq;
+      std::vector<Eigen::Matrix3Xd> J_list_perturbed;
+      GetOrderedContactJacobian(q_perturbed, sim_params.contact_detection_tolerance, &J_list_perturbed, true);
+
+      DRAKE_ASSERT(J_list_unperturbed.size() == J_list_perturbed.size());
+      const auto J_finite_diff = (J_list_perturbed[i] - J) / dq;
+
+      // std::cout << "||J||:" << J.norm() << " ||J_list_perturbed||:" << J_list_perturbed[i].norm() << std::endl;
+
+      H.block(0, j, n_v, 1) = J_finite_diff.row(0);
+      H.block(n_v, j, n_v, 1) = J_finite_diff.row(1);
+      H.block(2*n_v, j, n_v, 1) = J_finite_diff.row(2);
+    }
+    H_list_ptr->push_back(H);
+  }
+
+  // TODO(yongpeng): remove after debugging
+  // // compute dJ/dq using AutoDiff
+  // // std::cout << "calc dJ/dq with AutoDiff" << std::endl;
+  // const auto q_ad = InitializeAutoDiff(q);
+  // UpdateMbpAdPositions(q_ad);
+  // const auto sdps_ad = CalcSignedDistancePairsFromCollisionPairs();
+  // std::vector<Matrix3X<AutoDiffXd>> J_ad_list;
+  // VectorX<AutoDiffXd> phi_ad;
+  // MatrixX<AutoDiffXd> Jn_ad_list;
+  // cjc_ad_->CalcJacobianAndPhiSocp(context_plant_ad_, sdps_ad, &phi_ad, &Jn_ad_list, &J_ad_list, nullptr);
+  // std::vector<VectorX<AutoDiffXd>> J_ad_vec_list;
+  // for (size_t i = 0; i < sdps.size(); i++) {
+  //   VectorX<AutoDiffXd> J_ad_vec(3*n_v_);
+  //   for (size_t j = 0; j < 3; j++) {
+  //     J_ad_vec.block(j*n_v_, 0, n_v_, 1) = J_ad_list[i].row(j);
+  //   }
+  //   J_ad_vec_list.push_back(J_ad_vec);
+  // }
+
+  // // compare finite diff and AutoDiff
+  // // std::cout << "compare dJ/dq with AutoDiff and finite diff" << std::endl;
+  // for (size_t i = 0; i < sdps.size(); i++) {
+  //   // std::cout << "the " << i << "th contact" << std::endl;
+  //   const auto& J_ad_vec = J_ad_vec_list[i];
+  //   const Eigen::VectorXd H_AutoDiff = drake::math::ExtractGradient(J_ad_vec).reshaped();
+  //   const Eigen::VectorXd H_FiniteDiff = H_list_ptr->at(i).reshaped();
+
+  //   DRAKE_ASSERT((H_AutoDiff.norm() > 1e-5) && (H_FiniteDiff.norm() > 1e-5));
+  //   DRAKE_ASSERT(H_AutoDiff.size() == H_FiniteDiff.size());
+
+  //   double cosine = H_AutoDiff.dot(H_FiniteDiff) / (H_AutoDiff.norm() * H_FiniteDiff.norm());
+
+  //   // std::cout << "AutoDiff H dimensions: " << H_AutoDiff.rows() << "x" << H_AutoDiff.cols() << std::endl;
+  //   // std::cout << "FiniteDiff H dimensions: " << H_FiniteDiff.rows() << "x" << H_FiniteDiff.cols() << std::endl;
+  //   // std::cout << "||H_AutoDiff||=" << H_AutoDiff.norm() \
+  //   //           << " ||H_FiniteDiff||=" << H_FiniteDiff.norm() \
+  //   //           << " cosine similarity:" << cosine << std::endl;
+  //   DRAKE_ASSERT(std::abs(cosine) > 0.99);
+  // }
+}
+
+void QuasistaticSimulator::PrintAllJointWithNames() const {
+  for (int i = 0; i < plant_->num_joints(); ++i) {
+    const auto& joint = plant_->get_joint(JointIndex(i));
+    if (joint.num_positions() == 0) {
+      std::cout << "Joint " << i << ": " << joint.name() << std::endl;
+    }
+    else {
+      const int i_start = joint.position_start();
+      const int i_end = i_start + joint.num_positions();
+      std::cout << "Joint " << i << ": " << joint.name() << " index: [" << i_start << ", " << i_end << "]" << std::endl;
+    }
+  }
+}
+
+void QuasistaticSimulator::PrintAllContactWithNames(
+  const std::vector<drake::geometry::SignedDistancePair<double>>& sdps
+) const{
+  for (const auto sdp : sdps) {
+    std::vector<std::string> body_names;
+    GetBodyNameFromSdp(sdp, &body_names);
+    std::cout << "Contact: " << body_names[0] << " and " << body_names[1] << std::endl;
+  }
 }

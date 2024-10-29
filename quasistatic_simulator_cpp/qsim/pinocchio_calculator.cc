@@ -86,3 +86,4 @@ Eigen::Tensor<double, 3, Eigen::ColMajor, Eigen::DenseIndex> PinocchioCalculator
   return kin_H;
 
 }
+

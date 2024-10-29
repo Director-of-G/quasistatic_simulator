@@ -32,6 +32,9 @@
 
 cmake_minimum_required(VERSION 3.10.2)
 project(quasistatic_simulator)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # N.B. This is a temporary flag. It only really applies to Linux, as Mac
 # does not need X11.
@@ -76,9 +79,6 @@ get_filename_component(PYTHONPATH
         REALPATH
         )
 
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # My packages.

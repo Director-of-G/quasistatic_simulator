@@ -1,7 +1,8 @@
 #pragma once
 #include <iostream>
 
-#include "fusion.h"
+// #include "fusion.h"
+#include "qsim/contact_jacobian_calculator.h"
 #include <Eigen/Dense>
 #include "diffcp/log_barrier_solver.h"
 #include "diffcp/qp_derivatives.h"
@@ -12,7 +13,6 @@
 #include "drake/solvers/mosek_solver.h"
 #include "drake/solvers/osqp_solver.h"
 #include "drake/solvers/scs_solver.h"
-#include "qsim/contact_jacobian_calculator.h"
 
 // #define VERBOSE_TIMECOST
 
@@ -299,6 +299,45 @@ class QuasistaticSimulator {
 
 //   Eigen::Matrix
 
+  // TODO(yongpeng): move this out of the qsim class
+  /* ********************************************************************** */
+  /*
+    Get the contact Jacobian for a given configuration
+  */
+  void GetOrderedContactJacobian(
+    const Eigen::VectorXd& q,
+    double tolerance,
+    std::vector<Eigen::Matrix3Xd>* J_list_ptr,
+    bool in_order
+  );
+
+  void GetBodyNameFromSdp(
+    const drake::geometry::SignedDistancePair<double>& sdp,
+    std::vector<std::string>* body_names_ptr
+  ) const ;
+
+  void GetFingerNamesFromSdps(
+    const std::vector<drake::geometry::SignedDistancePair<double>>& sdps,
+    std::vector<std::string>* finger_names_ptr
+  ) const ;
+
+  void GetFingerGeomidsFromSdps(
+    const std::vector<drake::geometry::SignedDistancePair<double>>& sdps,
+    std::vector<CollisionPair>* collision_pairs_ptr
+  ) const ;
+  
+  void CalcContactHessianFiniteDiff(
+    QuasistaticSimParameters sim_params,
+    const Eigen::VectorXd& q,
+    std::vector<Eigen::MatrixXd>* H_list_ptr
+  );
+  /*
+    For debugging purposes
+  */
+  void PrintAllJointWithNames() const;
+  void PrintAllContactWithNames(const std::vector<drake::geometry::SignedDistancePair<double>>& sdps) const;
+  /* ********************************************************************** */
+
  private:
   static Eigen::Matrix<double, 4, 3> CalcNW2Qdot(
       const Eigen::Ref<const Eigen::Vector4d>& Q);
@@ -365,13 +404,23 @@ class QuasistaticSimulator {
       const QuasistaticSimParameters& params,
       const Eigen::LLT<Eigen::MatrixXd>& H_llt) const;
 
+  // TODO(yongpeng): Debug this
+  // -----------------------------------------------------------------------
+  Eigen::MatrixXd CalcDfDxLogIcecreamAnalytic(
+      const Eigen::Ref<const Eigen::VectorXd>& v_star,
+      const ModelInstanceIndexToVecMap& q_dict,
+      const ModelInstanceIndexToVecMap& q_next_dict,
+      const QuasistaticSimParameters& params,
+      const Eigen::LLT<Eigen::MatrixXd>& H_llt);
+  // -----------------------------------------------------------------------
+
   void CalcUnconstrainedBFromHessian(const Eigen::LLT<Eigen::MatrixXd>& H_llt,
                                      const QuasistaticSimParameters& params,
                                      const ModelInstanceIndexToVecMap& q_dict,
                                      Eigen::MatrixXd* B_ptr) const;
 
   std::vector<drake::geometry::SignedDistancePair<double>> CalcCollisionPairs(
-      double contact_detection_tolerance) const;
+      double contact_detection_tolerance, bool in_order) const;
 
   std::vector<drake::geometry::SignedDistancePair<drake::AutoDiffXd>>
   CalcSignedDistancePairsFromCollisionPairs(
@@ -594,6 +643,7 @@ class QuasistaticSimulator {
   // Internal state (for interfacing with QuasistaticSystem).
   const drake::geometry::QueryObject<double>* query_object_{nullptr};
   mutable std::vector<CollisionPair> collision_pairs_;
+  mutable std::vector<CollisionPair> ordered_collision_pairs_;
   mutable const drake::geometry::QueryObject<drake::AutoDiffXd>*
       query_object_ad_{nullptr};
   mutable drake::multibody::ContactResults<double> contact_results_;
@@ -622,4 +672,6 @@ class QuasistaticSimulator {
 
   // TODO(yongpeng): for contact normal
   mutable Eigen::MatrixXd Nhat_;
+
+  std::vector<std::string> ordered_fingers_in_contact_;  // ordered fingertips in contact
 };

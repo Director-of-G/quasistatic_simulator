@@ -334,7 +334,10 @@ void SocpLogBarrierSolver::CalcGradientAndHessian(
     Vector3d w = CalcWi<double>(G_i, e[i], v);
     const double d = -w[0] * w[0] + w[1] * w[1] + w[2] * w[2];
     w_bar << w[0], -w[1], -w[2];
+
+    // TODO(yongpeng): the first term should be 4 / d / d * A * w_bar * w_bar.transpose() * A.transpose()?
     D2w = 4 / d / d * w_bar * w_bar.transpose() - 2 / d * A;
+    
     *Df_ptr -= 2 / d * G_i.transpose() * w_bar;
     *H_ptr += G_i.transpose() * D2w * G_i;
   }

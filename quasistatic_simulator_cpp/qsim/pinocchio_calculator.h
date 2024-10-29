@@ -21,6 +21,8 @@
 #include <pinocchio/algorithm/jacobian.hpp>
 #include <pinocchio/algorithm/kinematics-derivatives.hpp>
 
+#include <drake/geometry/query_results/signed_distance_pair.h>
+
 class PinocchioCalculator {
  public:
   PinocchioCalculator(

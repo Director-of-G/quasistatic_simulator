@@ -39,6 +39,8 @@ enum class ForwardDynamicsMode {
   kLogIcecream
 };
 
+enum class DfDxMode {kAutoDiff, kAnalyticWithFiniteDiff};
+
 static const std::unordered_set<ForwardDynamicsMode> kPyramidModes{
     ForwardDynamicsMode::kQpMp, ForwardDynamicsMode::kLogPyramidMp,
     ForwardDynamicsMode::kLogPyramidMy};
@@ -115,6 +117,7 @@ struct QuasistaticSimParameters {
   // -------------------------- Not Set in YAML -------------------------
   ForwardDynamicsMode forward_mode{ForwardDynamicsMode::kQpMp};
   GradientMode gradient_mode{GradientMode::kNone};
+  DfDxMode gradient_dfdx_mode{DfDxMode::kAutoDiff};
   // ---------------------- pyramid cones only ---------------------------
   size_t nd_per_contact{0};
   // free solvers: SCS for cone programs, OSQP for QPs.

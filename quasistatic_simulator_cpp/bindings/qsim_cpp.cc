@@ -71,6 +71,10 @@ PYBIND11_MODULE(qsim_cpp, m) {
       .value("kLogPyramidMy", ForwardDynamicsMode::kLogPyramidMy)
       .value("kLogIcecream", ForwardDynamicsMode::kLogIcecream);
 
+  py::enum_ <DfDxMode>(m, "DfDxMode")
+      .value("kAutoDiff", DfDxMode::kAutoDiff)
+      .value("kAnalyticWithFiniteDiff", DfDxMode::kAnalyticWithFiniteDiff);
+
   {
     using Class = QuasistaticSimParameters;
     py::class_<Class>(m, "QuasistaticSimParameters")
@@ -85,6 +89,7 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def_readwrite("calc_contact_forces", &Class::calc_contact_forces)
         .def_readwrite("forward_mode", &Class::forward_mode)
         .def_readwrite("gradient_mode", &Class::gradient_mode)
+        .def_readwrite("gradient_dfdx_mode", &Class::gradient_dfdx_mode)
         .def_readwrite("gradient_lstsq_tolerance",
                        &Class::gradient_lstsq_tolerance)
         .def_readwrite("nd_per_contact", &Class::nd_per_contact)

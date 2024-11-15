@@ -160,6 +160,14 @@ PYBIND11_MODULE(qsim_cpp, m) {
                  &Class::CalcDynamicsForward),
              py::arg("q"), py::arg("u"), py::arg("sim_params"))
 
+        .def("calc_dynamics_forward", 
+             py::overload_cast<const Eigen::Ref<const Eigen::VectorXd>&,
+                               const Eigen::Ref<const Eigen::VectorXd>&,
+                               const Eigen::Ref<const Eigen::VectorXd>&,
+                               const QuasistaticSimParameters&>(
+                 &Class::CalcDynamicsForward),
+             py::arg("q"), py::arg("u"), py::arg("tau_ext"), py::arg("sim_params"))
+
         .def("calc_dynamics_backward",
              py::overload_cast<const QuasistaticSimParameters&>(
                  &Class::CalcDynamicsBackward),
@@ -216,9 +224,13 @@ PYBIND11_MODULE(qsim_cpp, m) {
         .def("get_q_a_indices_into_q", &Class::GetQaIndicesIntoQ)
         .def("get_q_u_indices_into_q", &Class::GetQuIndicesIntoQ)
         .def("get_actuated_joint_limits", &Class::GetActuatedJointLimits)
+        .def("get_avg_forward_time", &Class::get_avg_forward_time)
+        .def("get_avg_backward_time", &Class::get_avg_backward_time)
         .def("print_solver_info_for_default_params",
              &Class::print_solver_info_for_default_params)
-        .def("set_manipuland_names", &Class::SetManipulandNames);
+        .def("set_manipuland_names", &Class::SetManipulandNames)
+        .def("set_collision_body_names", &Class::SetCollisionBodyNames)
+        .def("check_collision", &Class::CheckCollision);
   }
 
   {

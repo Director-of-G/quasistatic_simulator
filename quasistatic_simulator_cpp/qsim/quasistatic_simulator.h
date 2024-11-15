@@ -66,6 +66,8 @@ class QuasistaticSimulator {
   Eigen::VectorXd GetPositions(
       drake::multibody::ModelInstanceIndex model) const;
 
+  // Step calculates forward dynamics and gradients at the same time
+  // -----------------------------------------------------------------------
   void Step(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
             const ModelInstanceIndexToVecMap& tau_ext_dict,
             const QuasistaticSimParameters& params);
@@ -163,6 +165,9 @@ class QuasistaticSimulator {
   int num_unactuated_dofs() const { return n_v_u_; }
   int num_dofs() const { return n_v_a_ + n_v_u_; }
 
+  double get_avg_forward_time() const {return total_forward_time_ / (n_forward_calls_+1e-5);}
+  double get_avg_backward_time() const {return total_backward_time_ / (n_backward_calls_+1e-5);}
+
   Eigen::MatrixXd get_Dq_nextDq() const { return Dq_nextDq_; }
   Eigen::MatrixXd get_Dq_nextDqa_cmd() const { return Dq_nextDqa_cmd_; }
 
@@ -213,17 +218,23 @@ class QuasistaticSimulator {
   ModelInstanceIndexToVecMap GetQaCmdDictFromVec(
       const Eigen::Ref<const Eigen::VectorXd>& q_a_cmd) const;
 
+  void AddTauExtFromVec(
+    const Eigen::Ref<const Eigen::VectorXd>& tau_ext,
+    ModelInstanceIndexToVecMap* tau_ext_dict
+  ) const;
+
   Eigen::VectorXi GetQaIndicesIntoQ() const;
   Eigen::VectorXi GetQuIndicesIntoQ() const;
   Eigen::VectorXi GetModelsIndicesIntoQ(
       const std::set<drake::multibody::ModelInstanceIndex>& models) const;
 
+  // CalcDynamics is a wrapper of Step
   static Eigen::VectorXd CalcDynamics(
       QuasistaticSimulator* q_sim, const Eigen::Ref<const Eigen::VectorXd>& q,
       const Eigen::Ref<const Eigen::VectorXd>& u,
       const QuasistaticSimParameters& sim_params);
 
-  // TODO(yongpeng): added the splition of forward and backward dynamics
+  // Calc and CalcDiff calculates forward dynamics and gradients, respectively
   // -----------------------------------------------------------------------
   void Calc(const ModelInstanceIndexToVecMap& q_a_cmd_dict,
             const ModelInstanceIndexToVecMap& tau_ext_dict,
@@ -231,11 +242,20 @@ class QuasistaticSimulator {
 
   void CalcDiff(const QuasistaticSimParameters& params);
 
+  // CalcDynamicsForward is a wrapper of Calc
   static Eigen::VectorXd CalcDynamicsForward(
       QuasistaticSimulator* q_sim, const Eigen::Ref<const Eigen::VectorXd>& q,
       const Eigen::Ref<const Eigen::VectorXd>& u,
       const QuasistaticSimParameters& sim_params);
 
+  // CalcDynamicsForward that accepts qau_ext for underactuated object
+  static Eigen::VectorXd CalcDynamicsForward(
+      QuasistaticSimulator* q_sim, const Eigen::Ref<const Eigen::VectorXd>& q,
+      const Eigen::Ref<const Eigen::VectorXd>& u,
+      const Eigen::Ref<const Eigen::VectorXd>& tau_u,
+      const QuasistaticSimParameters& sim_params);
+
+  // CalcDynamicsBackward is a wrapper of CalcDiff
   void CalcDynamicsBackward(
       QuasistaticSimulator* q_sim,
       const QuasistaticSimParameters& sim_params);
@@ -247,6 +267,11 @@ class QuasistaticSimulator {
    */
   Eigen::VectorXd CalcDynamicsForward(const Eigen::Ref<const Eigen::VectorXd>& q,
                                       const Eigen::Ref<const Eigen::VectorXd>& u,
+                                      const QuasistaticSimParameters& sim_params);
+
+  Eigen::VectorXd CalcDynamicsForward(const Eigen::Ref<const Eigen::VectorXd>& q,
+                                      const Eigen::Ref<const Eigen::VectorXd>& u,
+                                      const Eigen::Ref<const Eigen::VectorXd>& tau_ext,
                                       const QuasistaticSimParameters& sim_params);
 
   void CalcDynamicsBackward(const QuasistaticSimParameters& sim_params);
@@ -311,6 +336,20 @@ class QuasistaticSimulator {
     bool in_order
   );
 
+  drake::multibody::JointIndex GetParentJointIndex(
+    const drake::multibody::Body<double>& body
+  ) const;
+
+  void SetCollisionBodyNames(
+    const std::vector<std::string>& fingertip_names,
+    const std::string& object_name
+  );
+
+  void FindDofIndicesToRoot(
+    const std::string& body_name,
+    std::vector<long>* q_indices_ptr
+  ) const;
+
   void GetBodyNameFromSdp(
     const drake::geometry::SignedDistancePair<double>& sdp,
     std::vector<std::string>* body_names_ptr
@@ -336,6 +375,7 @@ class QuasistaticSimulator {
   */
   void PrintAllJointWithNames() const;
   void PrintAllContactWithNames(const std::vector<drake::geometry::SignedDistancePair<double>>& sdps) const;
+  bool CheckCollision() const;
   /* ********************************************************************** */
 
  private:
@@ -673,5 +713,8 @@ class QuasistaticSimulator {
   // TODO(yongpeng): for contact normal
   mutable Eigen::MatrixXd Nhat_;
 
-  std::vector<std::string> ordered_fingers_in_contact_;  // ordered fingertips in contact
+  // std::vector<std::string> ordered_fingers_in_contact_;  // ordered fingertips in contact
+  std::map<std::string, std::vector<long>> body_to_q_indices_; // body name to active dofs indices map
+  int n_forward_calls_{0}, n_backward_calls_{0};
+  double total_forward_time_{0}, total_backward_time_{0};
 };

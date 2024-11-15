@@ -1,6 +1,9 @@
 #include "controllers/contact_controller.h"
+#include "drake/multibody/parsing/process_model_directives.h"
 
 
+using std::string;
+using Eigen::Vector3d;
 using drake::geometry::AddCompliantHydroelasticProperties;
 using drake::geometry::AddContactMaterial;
 using drake::geometry::Box;
@@ -27,10 +30,51 @@ using drake::multibody::Parser;
 using drake::multibody::RigidBody;
 using drake::multibody::SpatialInertia;
 using drake::multibody::UnitInertia;
-using Eigen::Vector3d;
 
 Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 
+
+/*
+    The following creates a multibody plant model for the low level.
+    Only kinematics is needed in low level.
+*/
+void CreateMbpLowlevel(
+    drake::systems::DiagramBuilder<double>* builder,
+    drake::multibody::MultibodyPlant<double>** plant,
+    drake::geometry::SceneGraph<double>** scene_graph,
+    const string& robot_sdf_path,
+    const std::unordered_map<string, string>& object_sdf_paths,
+    const std::unordered_map<string, string>& package_paths,
+    double time_step
+) {
+    // Combine plant, scene graph and builder
+    std::tie(*plant, *scene_graph) =
+      drake::multibody::AddMultibodyPlantSceneGraph(builder, time_step);
+    (*plant)->set_name("MultiBodyPlant");
+    (*scene_graph)->set_name("SceneGraph");
+    auto parser = drake::multibody::Parser(*plant, *scene_graph);
+    
+    // Add package paths
+    for (const auto& item : package_paths) {
+        parser.package_map().Add(item.first, item.second);
+    }
+
+    // TODO(yongpeng): remember add the object before robot, so that q will be [qu;qa]
+    // Add object
+    for (const auto& item : object_sdf_paths) {
+        const auto& name = item.first;
+        const auto& path = item.second;
+        parser.AddModelFromFile(path, name);
+    }
+
+    // Add dex hand
+    drake::multibody::parsing::ProcessModelDirectives(
+      drake::multibody::parsing::LoadModelDirectives(robot_sdf_path),
+      *plant, nullptr, &parser);
+
+    // Finalize
+    (*plant)->Finalize();
+}
 
 void AddFreeFloatingSphereToPlant(MultibodyPlant<double>* plant_ptr) {
 
@@ -320,10 +364,58 @@ ContactController::ContactController(
     fext_feed_forward_.setZero();
 }
 
+ContactController::ContactController(
+    const std::string& robot_sdf_path,
+    const std::unordered_map<string, string>& object_sdf_paths,
+    const std::unordered_map<string, string>& package_paths,
+    ContactControllerParameters controller_params
+): params_(std::move(controller_params)),
+   solver_osqp_(std::make_unique<drake::solvers::OsqpSolver>()) {
+    // Set up the system diagram for the simulator
+    drake::systems::DiagramBuilder<double> builder;
+    drake::multibody::MultibodyPlantConfig config;
+    config.time_step = 0.001;
+    
+    // Create Mbp
+    CreateMbpLowlevel(&builder, &plant_, &scene_graph_, robot_sdf_path, object_sdf_paths, package_paths, config.time_step);
+
+    // Build
+    if (controller_params.object_geom == ObjectGeom::kFreeMoveSphere) {
+        ExcludeRobotCollisionWithEnvs(plant_, scene_graph_);
+    }
+
+    diagram_ = builder.Build();
+    diagram_context_ = diagram_->CreateDefaultContext();
+    plant_context_ = &(diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get()));
+
+    // others
+    contact_model_ = std::make_unique<CompliantContactModel>();
+    Kpa_ = 0.5 * Eigen::MatrixXd::Identity(16, 16);
+    Kda_ = 1e-3 * Eigen::MatrixXd::Identity(16, 16);
+    Kda_inv_ = Kda_.inverse();
+    nc_ = 4;
+    nqa_ = plant_->num_actuated_dofs();
+    nvu_ = plant_->num_velocities() - nqa_;
+
+    tau_feed_forward_.resize(nqa_);
+    fext_feed_forward_.resize(3 * nc_);
+    fext_feed_forward_.setZero();
+}
+
+void ContactController::SetFingerGeomNames(
+    const std::vector<std::string>& finger_geom_name_list
+) {
+    finger_geom_name_list_ = std::move(finger_geom_name_list);
+}
+
 Eigen::VectorXd ContactController::Step(
     const Eigen::Ref<const Eigen::VectorXd>& q,
     const Eigen::Ref<const Eigen::VectorXd>& v
 ) {
+    if (finger_geom_name_list_.empty()) {
+        throw std::runtime_error("Finger geom names are not set.");
+    }
+
     SetPlantPositionsAndVelocities(q, v);
 
     std::vector<Eigen::MatrixXd> Kbar_list, J_list;
@@ -339,10 +431,23 @@ Eigen::VectorXd ContactController::Step(
     Eigen::MatrixXd Q, R, delR;
     CalcMPCProblemMatrices(Kbar_list, J_list, B_Fe, &A_continuous_, &B_continuous_, &Q, &R, &delR);
 
-    // std::cout << "continuous A mat " << Ac.format(CleanFmt) << std::endl;
-    // std::cout << "continuous B mat " << Bc.format(CleanFmt) << std::endl;
+    // for (const auto& item : Kbar_list) {
+    //     std::cout << "Kbar " << item.format(CleanFmt) << std::endl;
+    // }
+
+    // for (const auto& item : J_list) {
+    //     std::cout << "J " << item.format(CleanFmt) << std::endl;
+    // }
+
+    // std::cout << "B_Fe " << B_Fe.format(CleanFmt) << std::endl;
+    
+    // std::cout << "continuous A mat " << A_continuous_.format(CleanFmt) << std::endl;
+    // std::cout << "continuous B mat " << B_continuous_.format(CleanFmt) << std::endl;
 
     ContinuousToDiscrete(A_continuous_, B_continuous_, params_.time_step, &A_discrete_, &B_discrete_);
+
+    // std::cout << "discrete A mat " << A_discrete_.format(CleanFmt) << std::endl;
+    // std::cout << "discrete B mat " << B_discrete_.format(CleanFmt) << std::endl;
 
     Eigen::VectorXd u0;
     SolveSparseMPC(A_discrete_, B_discrete_, Q, R, delR, x_ref_, x0_, &u0);
@@ -463,9 +568,11 @@ void ContactController::CalcStiffAndJacobian(
           .template Eval<drake::geometry::QueryObject<double>>(*plant_context_);
     const drake::geometry::SceneGraphInspector<double>& inspector =
         query_object.inspector();
+    // TODO(yongpeng): the default threshold is 0.1, need to be tuned
     const std::vector<SignedDistancePair<double>>& signed_distance_pairs =
-        query_object.ComputeSignedDistancePairwiseClosestPoints(0.1);
+        query_object.ComputeSignedDistancePairwiseClosestPoints(1.0);
 
+    // std::cout << "sdp size: " << signed_distance_pairs.size() << std::endl;
     for (const SignedDistancePair<double>& pair : signed_distance_pairs) {
         int index_ = -1;
 
@@ -479,8 +586,14 @@ void ContactController::CalcStiffAndJacobian(
         const GeometryId geometryB_id = pair.id_B;
 
         std::string geomA_name = inspector.GetName(geometryA_id);
+        std::string geomB_name = inspector.GetName(geometryB_id);
+        // std::cout << "name: A is " << geomA_name << ", and B is " << inspector.GetName(geometryB_id) << " index: " << index_ << std::endl;
+        // std::cout << "signed distance: " << pair.distance << std::endl;
         if (std::find(finger_geom_name_list_.begin(), finger_geom_name_list_.end(), geomA_name) != finger_geom_name_list_.end()) {
             index_ = std::find(finger_geom_name_list_.begin(), finger_geom_name_list_.end(), geomA_name) - finger_geom_name_list_.begin();
+        }
+        else if (std::find(finger_geom_name_list_.begin(), finger_geom_name_list_.end(), geomB_name) != finger_geom_name_list_.end()) {
+            index_ = std::find(finger_geom_name_list_.begin(), finger_geom_name_list_.end(), geomB_name) - finger_geom_name_list_.begin();
         }
         else {
             continue;

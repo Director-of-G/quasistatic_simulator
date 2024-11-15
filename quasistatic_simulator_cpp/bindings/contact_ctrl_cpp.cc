@@ -54,6 +54,12 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def(py::init<std::string,
                       ContactControllerParameters>(),
              py::arg("model_path"), py::arg("controller_params"))
+        .def(py::init<const std::string&,
+              const std::unordered_map<std::string, std::string>&,
+              const std::unordered_map<std::string, std::string>,
+              ContactControllerParameters>(),
+             py::arg("robot_sdf_path"), py::arg("object_sdf_paths"),
+             py::arg("package_paths"), py::arg("controller_params"))
         .def("step",
               py::overload_cast<const Eigen::Ref<const Eigen::VectorXd>&,
                                const Eigen::Ref<const Eigen::VectorXd>&>
@@ -76,6 +82,7 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def("get_Ac", &Class::Get_Ac)
         .def("get_Bc", &Class::Get_Bc)
         .def("get_phi_vn_vt", &Class::Get_phi_vn_vt)
-        .def("get_tau_feedforward", &Class::Get_tau_feedforward);
+        .def("get_tau_feedforward", &Class::Get_tau_feedforward)
+        .def("set_finger_geom_names", &Class::SetFingerGeomNames);
   }
 }

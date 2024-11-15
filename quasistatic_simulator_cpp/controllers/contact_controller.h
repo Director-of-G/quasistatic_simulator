@@ -39,12 +39,26 @@
 #include "controllers/contact_controller_params.h"
 #include "controllers/contact_model.h"
 
+using std::string;
+using drake::multibody::MultibodyPlant;
+
 
 class ContactController {
     public:
         ContactController(
             const std::string& model_path,
             ContactControllerParameters controller_params
+        );
+
+        ContactController(
+            const std::string& robot_sdf_path,
+            const std::unordered_map<string, string>& object_sdf_paths,
+            const std::unordered_map<string, string>& package_paths,
+            ContactControllerParameters controller_params
+        );
+
+        void SetFingerGeomNames(
+            const std::vector<std::string>& finger_geom_name_list
         );
 
         Eigen::VectorXd Step(
@@ -136,10 +150,11 @@ class ContactController {
         std::unique_ptr<drake::solvers::OsqpSolver> solver_osqp_;
         mutable drake::solvers::MathematicalProgramResult mp_result_;
 
-        const std::vector<std::string> finger_geom_name_list_{"allegro_hand_right::link_15_tip_collision_2",
-                                                              "allegro_hand_right::link_3_tip_collision_1",
-                                                              "allegro_hand_right::link_7_tip_collision_1",
-                                                              "allegro_hand_right::link_11_tip_collision_1"};
+        // const std::vector<std::string> finger_geom_name_list_{"allegro_hand_right::link_15_tip_collision_2",
+        //                                                       "allegro_hand_right::link_3_tip_collision_1",
+        //                                                       "allegro_hand_right::link_7_tip_collision_1",
+        //                                                       "allegro_hand_right::link_11_tip_collision_1"};
+        std::vector<std::string> finger_geom_name_list_;
 
         Eigen::VectorXd q_;
         Eigen::VectorXd v_;

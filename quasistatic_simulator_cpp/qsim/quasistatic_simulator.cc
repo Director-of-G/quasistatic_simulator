@@ -22,6 +22,7 @@ using drake::math::ExtractValue;
 using drake::math::InitializeAutoDiff;
 using drake::multibody::ModelInstanceIndex;
 using drake::multibody::Body;
+using drake::multibody::Joint;
 using drake::multibody::JointIndex;
 using Eigen::MatrixXd;
 using Eigen::Vector3d;
@@ -1319,6 +1320,22 @@ ModelInstanceIndexToVecMap QuasistaticSimulator::GetQaCmdDictFromVec(
   return q_a_cmd_dict;
 }
 
+void QuasistaticSimulator::AddTauExtFromVec(
+  const Eigen::Ref<const Eigen::VectorXd>& tau_ext,
+  ModelInstanceIndexToVecMap* tau_ext_dict
+) const {
+  DRAKE_THROW_UNLESS(tau_ext.size() == n_v_);
+  // apply external torque to unactuated models
+  for (const auto& model : models_unactuated_) {
+    if (tau_ext_dict->find(model) == tau_ext_dict->end()) {
+      const auto n_v_i = plant_->num_velocities(model);
+      (*tau_ext_dict)[model] = VectorXd::Zero(n_v_i);
+    }
+    const auto& idx_v = velocity_indices_.at(model);
+    (*tau_ext_dict)[model] += tau_ext(idx_v);
+  }
+}
+
 Eigen::VectorXi QuasistaticSimulator::GetModelsIndicesIntoQ(
     const std::set<drake::multibody::ModelInstanceIndex>& models) const {
   const int n = std::accumulate(models.begin(), models.end(), 0,
@@ -1751,8 +1768,9 @@ void QuasistaticSimulator::CalcGravityForUnactuatedModels(
 }
 
 ModelInstanceIndexToVecMap QuasistaticSimulator::CalcTauExt(
-    const std::vector<drake::multibody::ExternallyAppliedSpatialForce<double>>&
-        easf_list) const {
+  const std::vector<drake::multibody::ExternallyAppliedSpatialForce<double>>& easf_list
+
+) const {
   ModelInstanceIndexToVecMap tau_ext;
   GetGeneralizedForceFromExternalSpatialForce(easf_list, &tau_ext);
   CalcGravityForUnactuatedModels(&tau_ext);
@@ -2274,10 +2292,48 @@ VectorXd QuasistaticSimulator::CalcDynamicsForward(
 }
 
 VectorXd QuasistaticSimulator::CalcDynamicsForward(
+    QuasistaticSimulator* q_sim, const Eigen::Ref<const Eigen::VectorXd>& q,
+    const Eigen::Ref<const Eigen::VectorXd>& u,
+    const Eigen::Ref<const Eigen::VectorXd>& tau_u,
+    const QuasistaticSimParameters& sim_params) {
+  q_sim->UpdateMbpPositions(q);
+  auto tau_ext_dict = q_sim->CalcTauExt({});
+  auto q_a_cmd_dict = q_sim->GetQaCmdDictFromVec(u);
+  q_sim->AddTauExtFromVec(tau_u, &tau_ext_dict);
+  q_sim->Calc(q_a_cmd_dict, tau_ext_dict, sim_params);
+  return q_sim->GetMbpPositionsAsVec();
+}
+
+/*
+  The functions for binding with Python
+*/
+VectorXd QuasistaticSimulator::CalcDynamicsForward(
     const Eigen::Ref<const Eigen::VectorXd>& q,
     const Eigen::Ref<const Eigen::VectorXd>& u,
     const QuasistaticSimParameters& sim_params) {
-  return CalcDynamicsForward(this, q, u, sim_params);
+  auto t_start = std::chrono::steady_clock::now();
+  auto q_next = CalcDynamicsForward(this, q, u, sim_params);
+  auto t_end = std::chrono::steady_clock::now();
+  
+  n_forward_calls_ += 1;
+  total_forward_time_ += std::chrono::duration<double>(t_end - t_start).count();
+  
+  return q_next;
+}
+
+VectorXd QuasistaticSimulator::CalcDynamicsForward(
+    const Eigen::Ref<const Eigen::VectorXd>& q,
+    const Eigen::Ref<const Eigen::VectorXd>& u,
+    const Eigen::Ref<const Eigen::VectorXd>& tau_ext,
+    const QuasistaticSimParameters& sim_params) {
+  auto t_start = std::chrono::steady_clock::now();
+  auto q_next = CalcDynamicsForward(this, q, u, tau_ext, sim_params);
+  auto t_end = std::chrono::steady_clock::now();
+  
+  n_forward_calls_ += 1;
+  total_forward_time_ += std::chrono::duration<double>(t_end - t_start).count();
+  
+  return q_next;
 }
 
 void QuasistaticSimulator::CalcDynamicsBackward(
@@ -2288,7 +2344,12 @@ void QuasistaticSimulator::CalcDynamicsBackward(
 
 void QuasistaticSimulator::CalcDynamicsBackward(
     const QuasistaticSimParameters& sim_params) {
+  auto t_start = std::chrono::steady_clock::now();
   CalcDynamicsBackward(this, sim_params);
+  auto t_end = std::chrono::steady_clock::now();
+
+  n_backward_calls_ += 1;
+  total_backward_time_ += std::chrono::duration<double>(t_end - t_start).count();
 }
 
 void QuasistaticSimulator::SetManipulandNames(
@@ -2574,6 +2635,52 @@ void QuasistaticSimulator::GetOrderedContactJacobian(
   cjc_->CalcJacobianAndPhiSocp(context_plant_, sdps, &phi, &Jn, J_list_ptr, &Nhat);
 }
 
+drake::multibody::JointIndex QuasistaticSimulator::GetParentJointIndex(
+  const drake::multibody::Body<double>& body
+) const {
+  for (int i = 0; i < plant_->num_joints(); ++i) {
+    const auto& joint = plant_->get_joint(JointIndex(i));
+    if (joint.child_body().index() == body.index()) {
+      return joint.index();
+    }
+  }
+}
+
+void QuasistaticSimulator::SetCollisionBodyNames(
+  const std::vector<std::string>& fingertip_names,
+  const std::string& object_name
+) {
+  body_to_q_indices_.clear();
+  for (const auto& name : fingertip_names) {
+    std::vector<long> q_indices;
+    FindDofIndicesToRoot(name, &q_indices);
+    body_to_q_indices_[name] = q_indices;
+  }
+  std::vector<long> q_indices;
+  FindDofIndicesToRoot(object_name, &q_indices);
+  body_to_q_indices_["object"] = q_indices;
+}
+
+void QuasistaticSimulator::FindDofIndicesToRoot(
+  const std::string& body_name,
+  std::vector<long>* q_indices_ptr
+) const {
+  const Body<double>& body = plant_->GetBodyByName(body_name);
+
+  const Body<double>* current_body = &body;
+  q_indices_ptr->clear();
+
+  while (current_body->index() != plant_->world_body().index()) {
+      const auto& joint = plant_->get_joint(GetParentJointIndex(*current_body));
+      if (joint.num_positions() >= 1) {
+        for (int i = 0; i < joint.num_positions(); i++) {
+          q_indices_ptr->push_back(joint.position_start() + i);
+        }
+      }
+      current_body = &joint.parent_body();
+  }
+}
+
 void QuasistaticSimulator::GetBodyNameFromSdp(
   const drake::geometry::SignedDistancePair<double>& sdp,
   std::vector<std::string>* body_names_ptr
@@ -2616,9 +2723,14 @@ void QuasistaticSimulator::CalcContactHessianFiniteDiff(
   const Eigen::VectorXd& q,
   std::vector<Eigen::MatrixXd>* H_list_ptr
 ) {
+  if (body_to_q_indices_.empty()) {
+    std::stringstream ss;
+    ss << "You should call SetCollisionBodyNames first!";
+    throw std::logic_error(ss.str());
+  }
   // PrintAllJointWithNames();
 
-  int n_v = 17;
+  int n_v = plant_->num_velocities();
   double dq = 1e-5; // perturbation in each dim
   H_list_ptr->clear();
 
@@ -2638,51 +2750,56 @@ void QuasistaticSimulator::CalcContactHessianFiniteDiff(
     GetBodyNameFromSdp(sdp, &body_names);
 
     // include indices of the object and the corresponding finger
-    // TODO(yongpeng): do not hardcode
     const std::string& finger_name = body_names[1];
     // std::cout << "finger " << i << " when diff(H): " << finger_name << std::endl;
     std::vector<long> q_indices;
-    if (finger_name == "fingertip") {
-      // q_indices = {1, 2, 3, 4};
-      q_indices = {5, 6, 7, 8};
-    }
-    else if (finger_name == "fingertip_2") {
-      // q_indices = {9, 10, 11, 12};
-      q_indices = {13, 14, 15, 16};
-    }
-    else if (finger_name == "fingertip_3") {
-      // q_indices = {13, 14, 15, 16};
-      q_indices = {9, 10, 11, 12};
-    }
-    else if (finger_name == "thumb_fingertip") {
-      // q_indices = {5, 6, 7, 8};
-      q_indices = {1, 2, 3, 4};
-    }
-    else {
-      std::cout << "Unknown finger name: " << finger_name << std::endl;
-      continue;
-    }
-    
+    // if (finger_name == "fingertip") {
+    //   q_indices = {1, 2, 3, 4};
+    //   // q_indices = {5, 6, 7, 8};
+    // }
+    // else if (finger_name == "fingertip_2") {
+    //   q_indices = {9, 10, 11, 12};
+    //   // q_indices = {13, 14, 15, 16};
+    // }
+    // else if (finger_name == "fingertip_3") {
+    //   q_indices = {13, 14, 15, 16};
+    //   // q_indices = {9, 10, 11, 12};
+    // }
+    // else if (finger_name == "thumb_fingertip") {
+    //   q_indices = {5, 6, 7, 8};
+    //   // q_indices = {1, 2, 3, 4};
+    // }
+    // else {
+    //   std::cout << "Unknown finger name: " << finger_name << std::endl;
+    //   continue;
+    // }
+    q_indices = body_to_q_indices_.at(finger_name);
+    q_indices.insert(q_indices.end(), body_to_q_indices_.at("object").begin(), body_to_q_indices_.at("object").end());
+
     Eigen::MatrixXd H(3*n_v, n_v);
     H.setZero();
-    // for (const auto j : q_indices) {
-    for (size_t j = 0; j <= 16; j++) {
+
+    for (const auto j : q_indices) {
+    // for (size_t j = 0; j <= 16; j++) {
       // perturb each finger joint and object joint
       auto q_perturbed = q;
       q_perturbed[j] += dq;
       std::vector<Eigen::Matrix3Xd> J_list_perturbed;
       GetOrderedContactJacobian(q_perturbed, sim_params.contact_detection_tolerance, &J_list_perturbed, true);
 
+
       DRAKE_ASSERT(J_list_unperturbed.size() == J_list_perturbed.size());
       const auto J_finite_diff = (J_list_perturbed[i] - J) / dq;
 
       // std::cout << "||J||:" << J.norm() << " ||J_list_perturbed||:" << J_list_perturbed[i].norm() << std::endl;
+      // std::cout << "||J_finite_diff||" << J_finite_diff.norm() << std::endl;
 
       H.block(0, j, n_v, 1) = J_finite_diff.row(0);
       H.block(n_v, j, n_v, 1) = J_finite_diff.row(1);
       H.block(2*n_v, j, n_v, 1) = J_finite_diff.row(2);
     }
     H_list_ptr->push_back(H);
+    // std::cout << "||H||:" << H.norm() << std::endl;
   }
 
   // TODO(yongpeng): remove after debugging
@@ -2748,4 +2865,8 @@ void QuasistaticSimulator::PrintAllContactWithNames(
     GetBodyNameFromSdp(sdp, &body_names);
     std::cout << "Contact: " << body_names[0] << " and " << body_names[1] << std::endl;
   }
+}
+
+bool QuasistaticSimulator::CheckCollision() const {
+  return query_object_->HasCollisions();
 }

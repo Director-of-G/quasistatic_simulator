@@ -22,8 +22,8 @@ target_link_libraries(quasistatic_simulator optimization_derivatives
         yaml-cpp)
 target_include_directories(quasistatic_simulator PUBLIC ${PROJECT_SOURCE_DIR})
 
-add_library(pinocchio_calculator
-        pinocchio_calculator.h
-        pinocchio_calculator.cc)
-target_link_libraries(pinocchio_calculator PUBLIC ${PINOCCHIO_LIBRARY_DIRS} ${HPP_FCL_LIBRARIES} drake::drake)
-target_include_directories(pinocchio_calculator PUBLIC ${PINOCCHIO_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${HPP_FCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
+# add_library(pinocchio_calculator
+#         pinocchio_calculator.h
+#         pinocchio_calculator.cc)
+# target_link_libraries(pinocchio_calculator PUBLIC ${PINOCCHIO_LIBRARY_DIRS} ${HPP_FCL_LIBRARIES} drake::drake)
+# target_include_directories(pinocchio_calculator PUBLIC ${PINOCCHIO_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${HPP_FCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})

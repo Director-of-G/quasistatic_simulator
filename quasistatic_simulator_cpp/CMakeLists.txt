@@ -50,7 +50,7 @@ find_package(pinocchio REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 
-find_package(hpp-fcl REQUIRED)
+# find_package(hpp-fcl REQUIRED)
 
 # Mosek solver
 set(MOSEK_INSTALL_DIR "$ENV{MSK_HOME}/mosek/10.1/tools/platform/linux64x86")

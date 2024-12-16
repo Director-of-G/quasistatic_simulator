@@ -450,8 +450,8 @@ void QuasistaticSimulator::CalcContactResultsLogIcecream(
     generalized_fB_.row(i_c) = tau_Bc;
     spatial_fA_.row(i_c).head(3) = f_Ac_W;
     spatial_fB_.row(i_c).head(3) = -f_Ac_W;
-    contact_points_A_.row(i_c) = cpi.p_ACa;
-    contact_points_B_.row(i_c) = cpi.p_BCb;
+    contact_points_A_.row(i_c) = cpi.p_WCa;
+    contact_points_B_.row(i_c) = cpi.p_WCb;
     // contact_sdists_(i_c) = cpi.sdist;
 
     contact_geom_names_A_.push_back(cpi.geom_name_A);

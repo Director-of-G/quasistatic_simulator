@@ -16,6 +16,27 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
       .value("kCapsuleValve", ObjectGeom::kCapsuleValve);
 
   {
+    using Class = ContactModelParameters;
+    py::class_<Class>(m, "ContactModelParameters")
+        .def(py::init<>())
+        .def_readwrite("sigma", &Class::sigma)
+        .def_readwrite("k", &Class::k)
+        .def_readwrite("vd", &Class::vd)
+        .def_readwrite("vs", &Class::vs)
+        .def_readwrite("mu", &Class::mu)
+        .def("__copy__",
+             [](const Class& self) {
+               return Class(self);
+             })
+        .def(
+            "__deepcopy__",
+            [](const Class& self, py::dict) {
+              return Class(self);
+            },
+            "memo");
+  }
+  
+  {
     using Class = ContactControllerParameters;
     py::class_<Class>(m, "ContactControllerParameters")
         .def(py::init<>())
@@ -36,6 +57,7 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def_readwrite("enable_multi_contact", &Class::enable_multi_contact)
         .def_readwrite("hand_base_trans", &Class::hand_base_trans)
         .def_readwrite("hand_base_rot", &Class::hand_base_rot)
+        .def_readwrite("model_params", &Class::model_params)
         .def("__copy__",
              [](const Class& self) {
                return Class(self);
@@ -83,6 +105,8 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
         .def("get_Bc", &Class::Get_Bc)
         .def("get_phi_vn_vt", &Class::Get_phi_vn_vt)
         .def("get_tau_feedforward", &Class::Get_tau_feedforward)
+        .def("get_Ji", &Class::Get_Ji)
+        .def("get_Gi", &Class::Get_Gi)
         .def("set_finger_geom_names", &Class::SetFingerGeomNames);
   }
 }

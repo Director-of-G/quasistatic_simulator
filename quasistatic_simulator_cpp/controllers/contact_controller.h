@@ -84,6 +84,8 @@ class ContactController {
         Eigen::MatrixXd Get_Bc () const { return B_continuous_; }
         std::vector<Eigen::VectorXd> Get_phi_vn_vt () const { return contact_measurements_; }
         Eigen::VectorXd Get_tau_feedforward() const { return tau_feed_forward_; }
+        Eigen::MatrixXd Get_Ji(size_t i) const { if (i < J_all.size()) return J_all[i]; else return Eigen::MatrixXd::Zero(0, 0); }
+        Eigen::MatrixXd Get_Gi(size_t i) const { if (i < G_all.size()) return G_all[i]; else return Eigen::MatrixXd::Zero(0, 0); }
 
     private:
 
@@ -171,6 +173,9 @@ class ContactController {
 
         std::vector<Eigen::VectorXd> contact_measurements_;
         Eigen::VectorXd tau_feed_forward_;
+
+        /* Jacobians for debug */
+        std::vector<Eigen::MatrixXd> J_all, G_all;
 
         int nc_{4};
         int nqa_{16};

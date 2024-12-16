@@ -654,7 +654,7 @@ class QuasistaticSimulator {
   Eigen::MatrixXd spatial_fA_;          // spatial forces (only translation part is filled) that exert on body A/B
   Eigen::MatrixXd spatial_fB_;          // through the ith contact pair, expressed in world frame
   Eigen::MatrixXd contact_points_A_;    // contact points on body A/B, corresponding to the ith contact pair
-  Eigen::MatrixXd contact_points_B_;    // expressed in A/B's body frame
+  Eigen::MatrixXd contact_points_B_;    // expressed in world frame
   Eigen::VectorXd contact_sdists_;      // signed distance
   std::vector<std::string> contact_geom_names_A_;     // the name of contact geometry
   std::vector<std::string> contact_geom_names_B_;     // as they always change

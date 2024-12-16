@@ -26,11 +26,12 @@ void CompliantContactModel::CalcStiffnessAndDampingMatrices(
         dissipation_factor = 0.5 * (vn_vd - 2);
     }
     damping_n = std::abs(damping_n / (vd_ * compliant_fn));
+    double stiff_t = std::abs(mu_ * stiff_n);
 
     double damping_t = std::pow(vs_ * vs_ + vt.squaredNorm(), 1.5);
     damping_t = std::abs(-mu_ * compliant_fn * dissipation_factor * vs_ * vs_ / damping_t);
 
-    stiffness->diagonal() << 0.0, 0.0, stiff_n;
+    stiffness->diagonal() << stiff_t, stiff_t, stiff_n;
     damping->diagonal() << damping_t, damping_t, damping_n;
 
 }

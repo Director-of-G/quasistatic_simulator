@@ -15,6 +15,15 @@ enum class ObjectGeom {
 };
 
 
+struct ContactModelParameters {
+  double sigma{0.001};     
+  double k{500};           // stiffness
+  double vd{0.1};          // normal dissipation
+  double vs{0.1};          // tangential dissipation
+  double mu{1.0};          // friction coefficient
+};
+
+
 struct ContactControllerParameters {
   double weight_q{1e-3};
   double weight_dq{0.5};
@@ -35,4 +44,6 @@ struct ContactControllerParameters {
   bool enable_multi_contact{false};
 
   Eigen::Vector3d hand_base_trans, hand_base_rot;
+
+  struct ContactModelParameters model_params;
 };

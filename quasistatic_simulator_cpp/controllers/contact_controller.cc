@@ -288,25 +288,10 @@ ContactController::ContactController(
     const drake::Vector4<double> blue(0.2, 0.3, 0.6, 1.0);
     const drake::Vector4<double> black(0.0, 0.0, 0.0, 1.0);
 
-    // Add a model of the hand
-    Parser(&plant).AddModels(model_path);
-
-    Vector3d hand_trans(controller_params.hand_base_trans);
-    Vector3d hand_rot(controller_params.hand_base_rot);
-    RigidTransformd X_hand(
-        RollPitchYawd(hand_rot),
-        hand_trans
-    );
-    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("hand_root"),
-                      X_hand);
-
     // // Define gravity (so we can turn the hand upside down)
     // if (FLAGS_upside_down) {
     //   plant->mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 9.81));
     // }
-
-    // Disable gravity
-    plant.mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 0));
 
     // Add manipuland and environment
     switch (controller_params.object_geom)
@@ -336,6 +321,21 @@ ContactController::ContactController(
             break;
     }
 
+    // Add a model of the hand
+    Parser(&plant).AddModels(model_path);
+
+    Vector3d hand_trans(controller_params.hand_base_trans);
+    Vector3d hand_rot(controller_params.hand_base_rot);
+    RigidTransformd X_hand(
+        RollPitchYawd(hand_rot),
+        hand_trans
+    );
+    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("hand_root"),
+                      X_hand);
+
+    // Disable gravity
+    plant.mutable_gravity_field().set_gravity_vector(Vector3d(0, 0, 0));
+
     // Finalize and build
     plant.Finalize();
 
@@ -351,7 +351,7 @@ ContactController::ContactController(
     scene_graph_ = &scene_graph;
 
     // others
-    contact_model_ = std::make_unique<CompliantContactModel>();
+    contact_model_ = std::make_unique<CompliantContactModel>(controller_params.model_params);
     Kpa_ = 0.5 * Eigen::MatrixXd::Identity(16, 16);
     Kda_ = 1e-3 * Eigen::MatrixXd::Identity(16, 16);
     Kda_inv_ = Kda_.inverse();
@@ -389,7 +389,7 @@ ContactController::ContactController(
     plant_context_ = &(diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get()));
 
     // others
-    contact_model_ = std::make_unique<CompliantContactModel>();
+    contact_model_ = std::make_unique<CompliantContactModel>(controller_params.model_params);
     Kpa_ = 0.5 * Eigen::MatrixXd::Identity(16, 16);
     Kda_ = 1e-3 * Eigen::MatrixXd::Identity(16, 16);
     Kda_inv_ = Kda_.inverse();
@@ -421,6 +421,9 @@ Eigen::VectorXd ContactController::Step(
     std::vector<Eigen::MatrixXd> Kbar_list, J_list;
     std::vector<Eigen::MatrixXd> G_list, Ke_list;
     CalcStiffAndJacobian(&Kbar_list, &J_list, &G_list, &Ke_list);
+
+    J_all = J_list;
+    G_all = G_list;
 
     Eigen::MatrixXd B_Fe;
     B_Fe.setZero(3*nc_, nqa_);
@@ -534,6 +537,9 @@ void ContactController::SetPlantPositionsAndVelocities(
     plant().SetPositionsAndVelocities(plant_context_, q_v);
 }
 
+/*
+    TODO: assume A is object and B is robot
+*/
 void ContactController::CalcStiffAndJacobian(
     std::vector<Eigen::MatrixXd>* Kbar_all_ptr,
     std::vector<Eigen::MatrixXd>* J_all_ptr,
@@ -576,8 +582,8 @@ void ContactController::CalcStiffAndJacobian(
     for (const SignedDistancePair<double>& pair : signed_distance_pairs) {
         int index_ = -1;
 
-        // Normal outwards from A.
-        const drake::Vector3<double> nhat = -pair.nhat_BA_W;
+        // Normal outwards from B (robot).
+        const drake::Vector3<double> nhat = pair.nhat_BA_W;
         const drake::math::RotationMatrixd R_WC = 
             drake::math::RotationMatrixd::MakeFromOneVector(nhat, 2);
 
@@ -587,7 +593,6 @@ void ContactController::CalcStiffAndJacobian(
 
         std::string geomA_name = inspector.GetName(geometryA_id);
         std::string geomB_name = inspector.GetName(geometryB_id);
-        // std::cout << "name: A is " << geomA_name << ", and B is " << inspector.GetName(geometryB_id) << " index: " << index_ << std::endl;
         // std::cout << "signed distance: " << pair.distance << std::endl;
         if (std::find(finger_geom_name_list_.begin(), finger_geom_name_list_.end(), geomA_name) != finger_geom_name_list_.end()) {
             index_ = std::find(finger_geom_name_list_.begin(), finger_geom_name_list_.end(), geomA_name) - finger_geom_name_list_.begin();
@@ -598,6 +603,7 @@ void ContactController::CalcStiffAndJacobian(
         else {
             continue;
         }
+        // std::cout << "name: A is " << geomA_name << ", and B is " << inspector.GetName(geometryB_id) << " index: " << index_ << std::endl;
 
         const Body<double>& bodyA =
             *(plant().GetBodyFromFrameId(inspector.GetFrameId(geometryA_id)));
@@ -640,35 +646,20 @@ void ContactController::CalcStiffAndJacobian(
         const SpatialVelocity<double> V_WAc = V_WA.Shift(p_AC_W);
         const SpatialVelocity<double> V_WBc = V_WB.Shift(p_BC_W);
 
-        // Relative contact velocity.
-        const drake::Vector3<double> v_AcBc_W =
-            V_WBc.translational() - V_WAc.translational();
+        // Relative contact velocity (object - robot).
+        const drake::Vector3<double> v_BcAc_W =
+            V_WAc.translational() - V_WBc.translational();
 
         // Split into normal and tangential components.
-        const double vn = nhat.dot(v_AcBc_W);
-        const drake::Vector3<double> vt = v_AcBc_W - vn * nhat;
+        const double vn = nhat.dot(v_BcAc_W);
+        const drake::Vector3<double> vt = v_BcAc_W - vn * nhat;
 
-        // Contact Jacobian
+        // Contact Jacobian (robot side)
         // J_all.emplace_back(3, nqa_);
         Eigen::MatrixXd& Ja = J_all.at(index_);
-        Eigen::MatrixXd Jqd_vWAc_W;
-        Jqd_vWAc_W.setZero(3, plant().num_velocities());
+        Eigen::MatrixXd Jqd_vWBc_W;
+        Jqd_vWBc_W.setZero(3, plant().num_velocities());
         plant().CalcJacobianTranslationalVelocity(
-            *plant_context_,
-            drake::multibody::JacobianWrtVariable::kV,
-            bodyA.body_frame(),
-            X_WA.rotation().inverse() * p_AC_W,
-            plant().world_frame(),
-            plant().world_frame(),
-            &Jqd_vWAc_W
-        );
-        Ja = Jqd_vWAc_W.leftCols(nqa_);
-
-        // Grasping Matrix
-        Eigen::MatrixXd& Gu = G_all.at(index_);
-        Eigen::MatrixXd Jqd_vWBc_W;;
-        Jqd_vWBc_W.setZero(6, plant().num_velocities());
-        plant().CalcJacobianSpatialVelocity(
             *plant_context_,
             drake::multibody::JacobianWrtVariable::kV,
             bodyB.body_frame(),
@@ -677,7 +668,22 @@ void ContactController::CalcStiffAndJacobian(
             plant().world_frame(),
             &Jqd_vWBc_W
         );
-        Gu = Jqd_vWBc_W.rightCols(nvu_);
+        Ja = Jqd_vWBc_W.rightCols(nqa_);
+
+        // Grasping Matrix (object side)
+        Eigen::MatrixXd& Gu = G_all.at(index_);
+        Eigen::MatrixXd Jqd_vWAc_W;;
+        Jqd_vWAc_W.setZero(6, plant().num_velocities());
+        plant().CalcJacobianSpatialVelocity(
+            *plant_context_,
+            drake::multibody::JacobianWrtVariable::kV,
+            bodyA.body_frame(),
+            X_WA.rotation().inverse() * p_AC_W,
+            plant().world_frame(),
+            plant().world_frame(),
+            &Jqd_vWAc_W
+        );
+        Gu = Jqd_vWAc_W.leftCols(nvu_);
 
         // contact stiffness and damping
         // Kbar_all.emplace_back(3, 3);

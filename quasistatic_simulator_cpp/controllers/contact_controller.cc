@@ -743,7 +743,9 @@ void ContactController::CalcActuationMatrix(
         J_stack.block(3*i_c, 0, 3, nqa_) = J_all.at(i_c);
     }
 
-    Eigen::MatrixXd B_Fe = Eigen::MatrixXd::Identity(3*nc_, 3*nc_) + (1./kpa_) * K_bar * J_stack.transpose() + G_stack * Ko_inv * G_stack.transpose();
+    // TODO: maybe B_Fe is not correct
+    // Eigen::MatrixXd B_Fe = Eigen::MatrixXd::Identity(3*nc_, 3*nc_) + (1./kpa_) * K_bar * J_stack.transpose() + G_stack * Ko_inv * G_stack.transpose();
+    Eigen::MatrixXd B_Fe = -Eigen::MatrixXd::Identity(3*nc_, 3*nc_) + (1./kpa_) * K_bar * J_stack.transpose();
     B_Fe = B_Fe.inverse() * K_bar;
     *B_Fe_ptr = B_Fe;
 }

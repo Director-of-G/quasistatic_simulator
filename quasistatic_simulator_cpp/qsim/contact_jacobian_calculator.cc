@@ -243,6 +243,16 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiQp(
   }
 }
 
+template <typename T>
+auto calculate_max(const T& distance, double threshold) {
+    if constexpr (std::is_same_v<T, Eigen::AutoDiffScalar<Eigen::VectorXd>>) {
+        Eigen::AutoDiffScalar<Eigen::VectorXd> threshold_autodiff(threshold);
+        return std::max(distance, threshold_autodiff);
+    } else {
+        return std::max(distance, threshold);
+    }
+}
+
 /**
  * @brief Computes the contact Jacobians and the phi values for the SOC (Second-Order Cone Programming) problem.
  *
@@ -286,17 +296,20 @@ void ContactJacobianCalculator<T>::CalcJacobianAndPhiSocp(
     const auto& cpi = contact_pairs_[i_c];
     const auto mu = get_friction_coefficient(i_c);
 
+    auto thresholded_distance = calculate_max(sdp.distance, -0.0025);
+    // auto thresholded_distance = sdp.distance;
+
     // contact normal
     if (Nhat_list_ptr) {
       if (cpi.is_A_manipuland) {
-        Nhat_list_ptr->row(i_c) = sdp.distance * sdp.nhat_BA_W.transpose();
+        Nhat_list_ptr->row(i_c) = thresholded_distance * sdp.nhat_BA_W.transpose();
       }
       else {
-        Nhat_list_ptr->row(i_c) = - sdp.distance * sdp.nhat_BA_W.transpose();
+        Nhat_list_ptr->row(i_c) = - thresholded_distance * sdp.nhat_BA_W.transpose();
       }
     }
 
-    phi[i_c] = sdp.distance;
+    phi[i_c] = thresholded_distance;
     Jn.row(i_c) = sdp.nhat_BA_W.transpose() * cpi.Jc;
 
     J_list.template emplace_back(3, n_v);

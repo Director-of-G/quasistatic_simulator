@@ -15,12 +15,21 @@ enum class ObjectGeom {
 };
 
 
+// This class defines the type of contact model
+enum class ContactModelType {
+  kConstant,  // Constant stiffness and damping
+  kVariant    // Stiffness and damping depend on the distance & velocity
+};
+
+
 struct ContactModelParameters {
   double sigma{0.001};     
-  double k{500};           // stiffness
-  double vd{0.1};          // normal dissipation
-  double vs{0.1};          // tangential dissipation
-  double mu{1.0};          // friction coefficient
+  double k{500};            // stiffness
+  double d{100};            // damping
+  double vd{0.1};           // normal dissipation
+  double vs{0.1};           // tangential dissipation
+  double mu{1.0};           // friction coefficient
+  ContactModelType type;    // contact model type
 };
 
 

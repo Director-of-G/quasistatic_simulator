@@ -15,15 +15,21 @@ PYBIND11_MODULE(contact_ctrl_cpp, m) {
       .value("kFreeMoveSphere", ObjectGeom::kFreeMoveSphere)
       .value("kCapsuleValve", ObjectGeom::kCapsuleValve);
 
+  py::enum_<ContactModelType>(m, "ContactModelType")
+    .value("kConstant", ContactModelType::kConstant)
+    .value("kVariant", ContactModelType::kVariant);
+
   {
     using Class = ContactModelParameters;
     py::class_<Class>(m, "ContactModelParameters")
         .def(py::init<>())
         .def_readwrite("sigma", &Class::sigma)
         .def_readwrite("k", &Class::k)
+        .def_readwrite("d", &Class::d)
         .def_readwrite("vd", &Class::vd)
         .def_readwrite("vs", &Class::vs)
         .def_readwrite("mu", &Class::mu)
+        .def_readwrite("type", &Class::type)
         .def("__copy__",
              [](const Class& self) {
                return Class(self);
